@@ -7,6 +7,7 @@ interface ModalProps {
   title: string
   children: React.ReactNode
   footer?: React.ReactNode
+  size?: 'sm' | 'md' | 'lg'
 }
 
 export const Modal: React.FC<ModalProps> = ({
@@ -14,9 +15,16 @@ export const Modal: React.FC<ModalProps> = ({
   onClose,
   title,
   children,
-  footer
+  footer,
+  size = 'lg'
 }) => {
   if (!isOpen) return null
+
+  const sizeClasses = {
+    sm: 'max-w-md',
+    md: 'max-w-2xl',
+    lg: 'max-w-4xl'
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -24,7 +32,7 @@ export const Modal: React.FC<ModalProps> = ({
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
         onClick={onClose}
       />
-      <div className="relative bg-white rounded-lg shadow-card-hover max-w-2xl w-full max-h-[90vh] overflow-hidden">
+      <div className={`relative bg-white rounded-lg shadow-card-hover ${sizeClasses[size]} w-full max-h-[90vh] overflow-hidden`}>
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <h2 className="text-2xl font-bold font-serif text-black">{title}</h2>
           <button
