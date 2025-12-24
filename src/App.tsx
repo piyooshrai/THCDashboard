@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import { ToastProvider } from './components/common/Toast'
 import { Layout } from './components/layout/Layout'
+import { ToastProvider } from './components/common/Toast'
 import { Dashboard } from './pages/Dashboard'
 import { Users } from './pages/Users'
 import { Clients } from './pages/Clients'
