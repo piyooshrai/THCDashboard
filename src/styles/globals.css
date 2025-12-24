@@ -1,0 +1,41 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-gray-200;
+  }
+
+  body {
+    @apply bg-background font-sans text-black antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-serif;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-primary text-white h-14 px-6 rounded-lg text-sm font-semibold uppercase tracking-wide transition-all duration-300 hover:bg-[#1a2b5c] hover:-translate-y-0.5 hover:shadow-lg;
+  }
+
+  .btn-secondary {
+    @apply bg-white text-primary border border-gray-200 h-14 px-6 rounded-lg text-sm font-semibold uppercase tracking-wide transition-all duration-300 hover:bg-background hover:border-gray-300;
+  }
+
+  .card {
+    @apply bg-white rounded-lg p-8 shadow-card transition-all duration-300 hover:-translate-y-0.5 hover:shadow-card-hover;
+  }
+
+  .stat-card {
+    @apply bg-white rounded-lg p-7 shadow-card transition-all duration-300 hover:-translate-y-1 hover:shadow-card-hover;
+  }
+
+  .input {
+    @apply h-14 border border-gray-200 rounded-lg px-4 text-base bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none transition-all;
+  }
+}
