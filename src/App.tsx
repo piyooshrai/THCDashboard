@@ -20,7 +20,7 @@ function App() {
         <Layout>
           <Routes>
             <Route path="/" element={<Dashboard />} />
-            <Route path="/client-portal" element={<ClientPortal />} />
+            <Route path="/client-portal/:clientId" element={<ClientPortal />} />
             <Route path="/users" element={<Users />} />
             <Route path="/clients" element={<Clients />} />
             <Route path="/virtual-assistants" element={<VirtualAssistants />} />
