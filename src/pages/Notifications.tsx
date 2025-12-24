@@ -2,6 +2,8 @@ import React, { useState } from 'react'
 import { Header } from '../components/layout/Header'
 import { Card } from '../components/common/Card'
 import { Button } from '../components/common/Button'
+import { useToast } from '../components/common/Toast'
+import { ViewNotificationModal } from '../components/modals/ViewNotificationModal'
 import {
   DollarSign,
   FileText,
@@ -13,11 +15,15 @@ import { mockNotifications } from '../data/mockData'
 import type { Notification } from '../types'
 
 export const Notifications: React.FC = () => {
+  const { showToast } = useToast()
   const [notifications, setNotifications] = useState(mockNotifications)
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false)
+  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null)
 
   const handleMarkAllRead = () => {
     console.log('Marking all as read')
     setNotifications(notifications.map(n => ({ ...n, read: true })))
+    showToast({ type: 'success', message: 'All notifications marked as read' })
   }
 
   const handleMarkRead = (id: string) => {
@@ -25,6 +31,12 @@ export const Notifications: React.FC = () => {
     setNotifications(
       notifications.map(n => (n.id === id ? { ...n, read: true } : n))
     )
+    showToast({ type: 'success', message: 'Notification marked as read' })
+  }
+
+  const handleViewNotification = (notification: Notification) => {
+    setSelectedNotification(notification)
+    setIsViewModalOpen(true)
   }
 
   const getNotificationIcon = (iconName: string) => {
@@ -66,7 +78,7 @@ export const Notifications: React.FC = () => {
 
     return (
       <div
-        onClick={() => !notification.read && handleMarkRead(notification.id)}
+        onClick={() => handleViewNotification(notification)}
         className={`flex gap-4 p-4 rounded-lg transition-all cursor-pointer ${
           notification.read
             ? 'bg-white hover:bg-background'
@@ -111,33 +123,48 @@ export const Notifications: React.FC = () => {
   }
 
   return (
-    <>
-      <Header
-        title="Notifications"
-        subtitle="All system notifications"
-        actions={
-          <Button variant="secondary" onClick={handleMarkAllRead}>
-            Mark All as Read
-          </Button>
-        }
-      />
+    <div className="h-screen flex flex-col overflow-hidden">
+      <div className="flex-shrink-0">
+        <Header
+          title="Notifications"
+          subtitle="All system notifications"
+          actions={
+            <Button variant="secondary" onClick={handleMarkAllRead}>
+              Mark All as Read
+            </Button>
+          }
+        />
+      </div>
 
-      <Card>
-        <NotificationGroup title="Today" items={grouped.today} />
-        <NotificationGroup title="Yesterday" items={grouped.yesterday} />
-        <NotificationGroup title="This Week" items={grouped.thisWeek} />
-        <NotificationGroup title="Earlier" items={grouped.earlier} />
+      <div className="flex-1 overflow-y-auto">
+        <Card className="h-full">
+          <NotificationGroup title="Today" items={grouped.today} />
+          <NotificationGroup title="Yesterday" items={grouped.yesterday} />
+          <NotificationGroup title="This Week" items={grouped.thisWeek} />
+          <NotificationGroup title="Earlier" items={grouped.earlier} />
 
-        {notifications.length === 0 && (
-          <div className="text-center py-12">
-            <div className="p-4 bg-background rounded-full w-fit mx-auto mb-4">
-              <Bell className="w-12 h-12 text-gray-400" />
+          {notifications.length === 0 && (
+            <div className="text-center py-12">
+              <div className="p-4 bg-background rounded-full w-fit mx-auto mb-4">
+                <Bell className="w-12 h-12 text-gray-400" />
+              </div>
+              <p className="text-lg font-semibold text-black mb-2">No notifications</p>
+              <p className="text-gray-500">You're all caught up!</p>
             </div>
-            <p className="text-lg font-semibold text-black mb-2">No notifications</p>
-            <p className="text-gray-500">You're all caught up!</p>
-          </div>
-        )}
-      </Card>
-    </>
+          )}
+        </Card>
+      </div>
+
+      {/* Modals */}
+      <ViewNotificationModal
+        isOpen={isViewModalOpen}
+        onClose={() => {
+          setIsViewModalOpen(false)
+          setSelectedNotification(null)
+        }}
+        notification={selectedNotification}
+        onMarkRead={handleMarkRead}
+      />
+    </div>
   )
 }

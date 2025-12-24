@@ -74,8 +74,8 @@ export const Sidebar: React.FC = () => {
   }
 
   return (
-    <div className="fixed left-0 top-0 h-screen w-[280px] bg-white border-r border-gray-200 flex flex-col">
-      <div className="p-6 border-b border-gray-200">
+    <div className="w-[280px] h-screen bg-white border-r border-gray-200 flex flex-col flex-shrink-0">
+      <div className="p-6 border-b border-gray-200 flex-shrink-0">
         <h1 className="text-2xl font-bold font-serif text-primary">
           The Human Capital
         </h1>
