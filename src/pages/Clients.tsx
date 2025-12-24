@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Header } from '../components/layout/Header'
 import { Card } from '../components/common/Card'
 import { StatCard } from '../components/common/StatCard'
@@ -9,11 +10,12 @@ import { useToast } from '../components/common/Toast'
 import { ClientFormModal } from '../components/modals/ClientFormModal'
 import { ViewClientROIModal } from '../components/modals/ViewClientROIModal'
 import { ConfirmationModal } from '../components/modals/ConfirmationModal'
-import { Building2, Users, TrendingUp, Eye, Edit, Trash2, Filter } from 'lucide-react'
+import { Building2, Users, TrendingUp, Eye, Edit, Trash2, Filter, ExternalLink } from 'lucide-react'
 import { mockClients } from '../data/mockData'
 import type { Client } from '../types'
 
 export const Clients: React.FC = () => {
+  const navigate = useNavigate()
   const { showToast } = useToast()
   const [clients, setClients] = useState(mockClients)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
@@ -124,6 +126,13 @@ export const Clients: React.FC = () => {
       header: 'Actions',
       accessor: (row: Client) => (
         <div className="flex items-center gap-2">
+          <button
+            onClick={(e) => { e.stopPropagation(); navigate(`/client-portal/${row.id}`) }}
+            className="p-2 hover:bg-background rounded-lg transition-colors"
+            title="View Client Portal"
+          >
+            <ExternalLink className="w-4 h-4 text-primary" />
+          </button>
           <button
             onClick={(e) => { e.stopPropagation(); handleViewROI(row) }}
             className="p-2 hover:bg-background rounded-lg transition-colors"
