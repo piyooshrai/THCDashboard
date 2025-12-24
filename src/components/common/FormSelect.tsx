@@ -1,15 +1,10 @@
 import React from 'react'
 
-export interface SelectOption {
-  value: string
-  label: string
-}
-
 interface FormSelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
   label: string
   error?: string
   required?: boolean
-  options: SelectOption[]
+  options: { value: string; label: string }[]
 }
 
 export const FormSelect: React.FC<FormSelectProps> = ({
@@ -27,7 +22,7 @@ export const FormSelect: React.FC<FormSelectProps> = ({
         {required && <span className="text-error ml-1">*</span>}
       </label>
       <select
-        className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-colors bg-white ${className}`}
+        className={`input w-full ${error ? 'border-error focus:ring-error/10' : ''} ${className}`}
         {...props}
       >
         <option value="">Select {label}</option>

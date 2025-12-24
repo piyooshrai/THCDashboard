@@ -1,7 +1,7 @@
 import React from 'react'
 import { Modal } from '../common/Modal'
 import { Button } from '../common/Button'
-import { AlertCircle } from 'lucide-react'
+import { AlertTriangle } from 'lucide-react'
 
 interface ConfirmationModalProps {
   isOpen: boolean
@@ -34,6 +34,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
       isOpen={isOpen}
       onClose={onClose}
       title={title}
+      size="sm"
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>
@@ -49,17 +50,13 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
         </>
       }
     >
-      <div className="space-y-4">
-        <div className={`flex gap-4 p-4 rounded-lg ${isDangerous ? 'bg-error/10' : 'bg-primary/10'}`}>
-          <div className={`p-2 rounded-lg h-fit ${isDangerous ? 'bg-error/20' : 'bg-primary/20'}`}>
-            <AlertCircle className={`w-6 h-6 ${isDangerous ? 'text-error' : 'text-primary'}`} />
+      <div className="flex gap-4">
+        {isDangerous && (
+          <div className="p-3 bg-error/10 rounded-lg h-fit">
+            <AlertTriangle className="w-6 h-6 text-error" />
           </div>
-          <div>
-            <p className="text-sm text-gray-600">
-              {message}
-            </p>
-          </div>
-        </div>
+        )}
+        <p className="text-gray-600">{message}</p>
       </div>
     </Modal>
   )

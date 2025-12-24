@@ -1,12 +1,12 @@
 import React from 'react'
 
-interface FormFieldProps extends React.InputHTMLAttributes<HTMLInputElement> {
+interface FormTextAreaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
   label: string
   error?: string
   required?: boolean
 }
 
-export const FormField: React.FC<FormFieldProps> = ({
+export const FormTextArea: React.FC<FormTextAreaProps> = ({
   label,
   error,
   required,
@@ -19,8 +19,8 @@ export const FormField: React.FC<FormFieldProps> = ({
         {label}
         {required && <span className="text-error ml-1">*</span>}
       </label>
-      <input
-        className={`input w-full ${error ? 'border-error focus:ring-error/10' : ''} ${className}`}
+      <textarea
+        className={`input w-full min-h-[120px] ${error ? 'border-error focus:ring-error/10' : ''} ${className}`}
         {...props}
       />
       {error && <p className="mt-1 text-sm text-error">{error}</p>}
