@@ -5,7 +5,10 @@ import { Card } from '../components/common/Card'
 import { Table } from '../components/common/Table'
 import { Badge } from '../components/common/Badge'
 import { Button } from '../components/common/Button'
-import { UploadArea } from '../components/common/UploadArea'
+import { useToast } from '../components/common/Toast'
+import { UserFormModal } from '../components/modals/UserFormModal'
+import { UploadDocumentModal } from '../components/modals/UploadDocumentModal'
+import { ConfirmationModal } from '../components/modals/ConfirmationModal'
 import {
   Users,
   Building2,
@@ -19,16 +22,37 @@ import {
   mockStats,
   mockRecentUsers,
   mockRecentActivity,
-  mockFiles
+  mockFiles,
+  mockClients
 } from '../data/mockData'
 import type { User, FileItem } from '../types'
 
 export const Dashboard: React.FC = () => {
+  const { showToast } = useToast()
+  const [users, setUsers] = useState(mockRecentUsers)
   const [files, setFiles] = useState(mockFiles)
+  const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false)
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false)
+  const [deleteFileId, setDeleteFileId] = useState<number | null>(null)
 
-  const handleFileUpload = (uploadedFiles: File[]) => {
-    console.log('Files uploaded:', uploadedFiles)
-    const newFiles: FileItem[] = uploadedFiles.map((file, index) => ({
+  const handleCreateUser = (userData: Partial<User>) => {
+    console.log('Creating user:', userData)
+    const newUser: User = {
+      id: (users.length + 1).toString(),
+      name: userData.name || '',
+      email: userData.email || '',
+      role: userData.role as 'client' | 'va' | 'admin',
+      status: userData.status as 'active' | 'inactive' | 'pending',
+      joined: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      avatar: userData.name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'
+    }
+    setUsers([newUser, ...users])
+    showToast({ type: 'success', message: 'User created successfully' })
+  }
+
+  const handleFileUpload = (data: { files: File[]; clientId?: string; notes?: string }) => {
+    console.log('Files uploaded:', data)
+    const newFiles: FileItem[] = data.files.map((file, index) => ({
       id: files.length + index + 1,
       name: file.name,
       size: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
@@ -36,12 +60,22 @@ export const Dashboard: React.FC = () => {
       type: file.name.split('.').pop() || 'unknown'
     }))
     setFiles([...newFiles, ...files])
+    showToast({ type: 'success', message: `${data.files.length} file(s) uploaded successfully` })
   }
 
-  const handleDeleteFile = (fileId: number) => {
-    console.log('Deleting file:', fileId)
-    setFiles(files.filter(f => f.id !== fileId))
+  const handleDeleteFile = () => {
+    if (deleteFileId) {
+      console.log('Deleting file:', deleteFileId)
+      setFiles(files.filter(f => f.id !== deleteFileId))
+      showToast({ type: 'success', message: 'File deleted successfully' })
+      setDeleteFileId(null)
+    }
   }
+
+  const clientOptions = mockClients.map(c => ({
+    value: c.id,
+    label: c.name
+  }))
 
   const userColumns = [
     {
@@ -86,113 +120,123 @@ export const Dashboard: React.FC = () => {
   }
 
   return (
-    <>
-      <Header
-        title="Dashboard"
-        subtitle="Welcome back, Piyoosh. Here's what's happening today."
-        showSearch
-        actions={
-          <Button variant="primary">Add New</Button>
-        }
-      />
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <StatCard
-          icon={Users}
-          label="Total Users"
-          value={mockStats.totalUsers.value}
-          trend={mockStats.totalUsers.trend}
-          trendPositive={mockStats.totalUsers.positive}
-        />
-        <StatCard
-          icon={Building2}
-          label="Active Clients"
-          value={mockStats.activeClients.value}
-          trend={mockStats.activeClients.trend}
-          trendPositive={mockStats.activeClients.positive}
-          accent
-        />
-        <StatCard
-          icon={CheckCircle}
-          label="Tasks This Month"
-          value={mockStats.tasksThisMonth.value}
-          trend={mockStats.tasksThisMonth.trend}
-          trendPositive={mockStats.tasksThisMonth.positive}
-        />
-        <StatCard
-          icon={DollarSign}
-          label="Revenue"
-          value={mockStats.revenue.value}
-          trend={mockStats.revenue.trend}
-          trendPositive={mockStats.revenue.positive}
+    <div className="h-screen flex flex-col overflow-hidden">
+      <div className="flex-shrink-0">
+        <Header
+          title="Dashboard"
+          subtitle="Welcome back, Piyoosh. Here's what's happening today."
+          showSearch
+          actions={
+            <Button variant="primary" onClick={() => setIsAddUserModalOpen(true)}>
+              Add New
+            </Button>
+          }
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        <div className="lg:col-span-2">
-          <Card>
-            <h2 className="text-2xl font-bold font-serif text-black mb-6">
-              Recent Users
-            </h2>
-            <Table columns={userColumns} data={mockRecentUsers} />
-          </Card>
+      <div className="flex-1 overflow-y-auto space-y-5">
+        {/* Stats - Compact */}
+        <div className="grid grid-cols-4 gap-4">
+          <StatCard
+            icon={Users}
+            label="Total Users"
+            value={mockStats.totalUsers.value}
+            trend={mockStats.totalUsers.trend}
+            trendPositive={mockStats.totalUsers.positive}
+          />
+          <StatCard
+            icon={Building2}
+            label="Active Clients"
+            value={mockStats.activeClients.value}
+            trend={mockStats.activeClients.trend}
+            trendPositive={mockStats.activeClients.positive}
+            accent
+          />
+          <StatCard
+            icon={CheckCircle}
+            label="Tasks"
+            value={mockStats.tasksThisMonth.value}
+            trend={mockStats.tasksThisMonth.trend}
+            trendPositive={mockStats.tasksThisMonth.positive}
+          />
+          <StatCard
+            icon={DollarSign}
+            label="Revenue"
+            value={mockStats.revenue.value}
+            trend={mockStats.revenue.trend}
+            trendPositive={mockStats.revenue.positive}
+          />
         </div>
 
-        <div>
-          <Card>
-            <h2 className="text-2xl font-bold font-serif text-black mb-6">
-              Recent Activity
-            </h2>
-            <div className="space-y-4">
-              {mockRecentActivity.map((activity) => {
-                const Icon = getActivityIcon(activity.icon)
-                return (
-                  <div key={activity.id} className="flex gap-3">
-                    <div className="p-2 bg-background rounded-lg h-fit">
-                      <Icon className="w-5 h-5 text-primary" />
+        {/* Content Grid */}
+        <div className="grid grid-cols-3 gap-5">
+          <div className="col-span-2">
+            <Card className="h-[320px] flex flex-col">
+              <h2 className="text-xl font-bold font-serif text-black mb-4">
+                Recent Users
+              </h2>
+              <div className="flex-1 overflow-y-auto">
+                <Table columns={userColumns} data={users} />
+              </div>
+            </Card>
+          </div>
+
+          <div>
+            <Card className="h-[320px] overflow-y-auto">
+              <h2 className="text-xl font-bold font-serif text-black mb-4">
+                Recent Activity
+              </h2>
+              <div className="space-y-3">
+                {mockRecentActivity.map((activity) => {
+                  const Icon = getActivityIcon(activity.icon)
+                  return (
+                    <div key={activity.id} className="flex gap-2">
+                      <div className="p-2 bg-background rounded-lg h-fit flex-shrink-0">
+                        <Icon className="w-4 h-4 text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-black text-sm truncate">
+                          {activity.title}
+                        </p>
+                        <p className="text-xs text-gray-500 line-clamp-2">
+                          {activity.description}
+                        </p>
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          {activity.time}
+                        </p>
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <p className="font-semibold text-black text-sm">
-                        {activity.title}
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        {activity.description}
-                      </p>
-                      <p className="text-xs text-gray-400 mt-1">
-                        {activity.time}
-                      </p>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </Card>
+                  )
+                })}
+              </div>
+            </Card>
+          </div>
         </div>
-      </div>
 
-      <Card>
-        <h2 className="text-2xl font-bold font-serif text-black mb-6">
-          Document Management
-        </h2>
-        <UploadArea onFileSelect={handleFileUpload} />
+        {/* Document Management - Compact */}
+        <Card>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold font-serif text-black">
+              Document Management
+            </h2>
+            <Button variant="secondary" onClick={() => setIsUploadModalOpen(true)}>
+              Upload Files
+            </Button>
+          </div>
 
-        {files.length > 0 && (
-          <div className="mt-6">
-            <h3 className="text-lg font-semibold text-black mb-4">
-              Uploaded Files
-            </h3>
-            <div className="space-y-2">
-              {files.map((file) => (
+          {files.length > 0 && (
+            <div className="space-y-2 max-h-[200px] overflow-y-auto">
+              {files.slice(0, 5).map((file) => (
                 <div
                   key={file.id}
-                  className="flex items-center justify-between p-4 bg-background rounded-lg hover:bg-gray-100 transition-colors"
+                  className="flex items-center justify-between p-3 bg-background rounded-lg hover:bg-gray-100 transition-colors"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-white rounded-lg">
-                      <FileText className="w-5 h-5 text-primary" />
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className="p-2 bg-white rounded-lg flex-shrink-0">
+                      <FileText className="w-4 h-4 text-primary" />
                     </div>
-                    <div>
-                      <p className="font-semibold text-black text-sm">
+                    <div className="min-w-0">
+                      <p className="font-semibold text-black text-sm truncate">
                         {file.name}
                       </p>
                       <p className="text-xs text-gray-500">
@@ -200,16 +244,18 @@ export const Dashboard: React.FC = () => {
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1 flex-shrink-0">
                     <button
                       onClick={() => console.log('Downloading:', file.name)}
                       className="p-2 hover:bg-white rounded-lg transition-colors"
+                      title="Download"
                     >
                       <Download className="w-4 h-4 text-gray-600" />
                     </button>
                     <button
-                      onClick={() => handleDeleteFile(file.id)}
+                      onClick={() => setDeleteFileId(file.id)}
                       className="p-2 hover:bg-white rounded-lg transition-colors"
+                      title="Delete"
                     >
                       <Trash2 className="w-4 h-4 text-error" />
                     </button>
@@ -217,9 +263,34 @@ export const Dashboard: React.FC = () => {
                 </div>
               ))}
             </div>
-          </div>
-        )}
-      </Card>
-    </>
+          )}
+        </Card>
+      </div>
+
+      {/* Modals */}
+      <UserFormModal
+        isOpen={isAddUserModalOpen}
+        onClose={() => setIsAddUserModalOpen(false)}
+        onSubmit={handleCreateUser}
+        mode="create"
+      />
+
+      <UploadDocumentModal
+        isOpen={isUploadModalOpen}
+        onClose={() => setIsUploadModalOpen(false)}
+        onSubmit={handleFileUpload}
+        clients={clientOptions}
+      />
+
+      <ConfirmationModal
+        isOpen={deleteFileId !== null}
+        onClose={() => setDeleteFileId(null)}
+        onConfirm={handleDeleteFile}
+        title="Delete File"
+        message="Are you sure you want to delete this file? This action cannot be undone."
+        confirmText="Delete"
+        isDangerous
+      />
+    </div>
   )
 }
