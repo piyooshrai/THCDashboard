@@ -10,7 +10,8 @@ import {
   FolderOpen,
   BarChart3,
   Settings,
-  Bell
+  Bell,
+  Briefcase
 } from 'lucide-react'
 
 interface NavItem {
@@ -22,6 +23,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { label: 'Dashboard', path: '/', icon: LayoutDashboard, section: 'MAIN' },
+  { label: 'Client Portal', path: '/client-portal', icon: Briefcase },
   { label: 'Users', path: '/users', icon: Users },
   { label: 'Clients', path: '/clients', icon: Building2 },
   { label: 'Virtual Assistants', path: '/virtual-assistants', icon: UserCheck },

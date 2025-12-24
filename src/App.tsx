@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { Layout } from './components/layout/Layout'
 import { ToastProvider } from './components/common/Toast'
 import { Dashboard } from './pages/Dashboard'
+import { ClientPortal } from './pages/ClientPortal'
 import { Users } from './pages/Users'
 import { Clients } from './pages/Clients'
 import { VirtualAssistants } from './pages/VirtualAssistants'
@@ -19,6 +20,7 @@ function App() {
         <Layout>
           <Routes>
             <Route path="/" element={<Dashboard />} />
+            <Route path="/client-portal" element={<ClientPortal />} />
             <Route path="/users" element={<Users />} />
             <Route path="/clients" element={<Clients />} />
             <Route path="/virtual-assistants" element={<VirtualAssistants />} />
