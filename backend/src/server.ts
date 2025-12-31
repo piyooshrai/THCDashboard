@@ -111,12 +111,21 @@ app.use((req: Request, res: Response) => {
 // Global error handler (must be last)
 app.use(errorHandler);
 
-// Start server
-const startServer = async () => {
+// Initialize database connection
+const initializeDatabase = async () => {
   try {
-    // Connect to database
     await connectDatabase();
     logger.info('✅ Database connected successfully');
+  } catch (error) {
+    logger.error('❌ Failed to connect to database:', error);
+    throw error;
+  }
+};
+
+// Start server (for local development)
+const startServer = async () => {
+  try {
+    await initializeDatabase();
 
     // Start listening
     app.listen(PORT, () => {
@@ -148,6 +157,15 @@ process.on('SIGTERM', () => {
   process.exit(0);
 });
 
-startServer();
+// Initialize based on environment
+if (process.env.VERCEL === '1') {
+  // Serverless environment: only initialize database
+  initializeDatabase().catch((error) => {
+    logger.error('❌ Failed to initialize database in serverless environment:', error);
+  });
+} else {
+  // Local development: start full server with database
+  startServer();
+}
 
 export default app;
