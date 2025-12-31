@@ -13,7 +13,8 @@ import { ClientFormModal } from '../components/modals/ClientFormModal'
 import { ViewClientROIModal } from '../components/modals/ViewClientROIModal'
 import { ConfirmationModal } from '../components/modals/ConfirmationModal'
 import { Building2, Users, TrendingUp, Eye, Edit, Trash2, Filter, ExternalLink } from 'lucide-react'
-import { clientService, Client as APIClient, ROICalculation } from '../services/clientService'
+import { clientService } from '../services/clientService'
+import type { Client as APIClient, ROICalculation } from '../services/clientService'
 import type { Client } from '../types'
 
 export const Clients: React.FC = () => {

@@ -31,8 +31,8 @@ export interface UserProfile {
   role: string;
   phone?: string;
   isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export const authService = {

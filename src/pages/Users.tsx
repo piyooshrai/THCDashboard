@@ -11,8 +11,10 @@ import { UserFormModal } from '../components/modals/UserFormModal'
 import { UserDetailsModal } from '../components/modals/UserDetailsModal'
 import { ConfirmationModal } from '../components/modals/ConfirmationModal'
 import { Eye, Edit, Trash2, Filter } from 'lucide-react'
-import { userService, User as APIUser } from '../services/userService'
-import { authService, RegisterData } from '../services/authService'
+import { userService } from '../services/userService'
+import type { User as APIUser } from '../services/userService'
+import { authService } from '../services/authService'
+import type { RegisterData } from '../services/authService'
 import type { User } from '../types'
 
 export const Users: React.FC = () => {

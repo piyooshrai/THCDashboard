@@ -13,8 +13,8 @@ import { ViewVAPerformanceModal } from '../components/modals/ViewVAPerformanceMo
 import { AssignClientModal } from '../components/modals/AssignClientModal'
 import { ConfirmationModal } from '../components/modals/ConfirmationModal'
 import { UserCheck, Users, Star, Eye, Edit, Trash2, Filter, UserPlus } from 'lucide-react'
-import { vaService, VA as APIVA, VAPerformance } from '../services/vaService'
-import { feedbackService } from '../services/feedbackService'
+import { vaService } from '../services/vaService'
+import type { VA as APIVA, VAPerformance } from '../services/vaService'
 import type { VA } from '../types'
 
 export const VirtualAssistants: React.FC = () => {

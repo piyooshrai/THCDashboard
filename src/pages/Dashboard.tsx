@@ -21,9 +21,11 @@ import {
   Trash2
 } from 'lucide-react'
 import { analyticsService } from '../services/analyticsService'
-import { userService, User as APIUser } from '../services/userService'
+import { userService } from '../services/userService'
+import type { User as APIUser } from '../services/userService'
 import { clientService } from '../services/clientService'
-import { documentService, Document } from '../services/documentService'
+import { documentService } from '../services/documentService'
+import type { Document } from '../services/documentService'
 import { useAuth } from '../contexts/AuthContext'
 import type { User } from '../types'
 
