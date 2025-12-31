@@ -106,9 +106,10 @@ export const Settings: React.FC = () => {
     }
   }
 
-  const handleChangePassword = async (data: { currentPassword: string; newPassword: string }) => {
+  const handleChangePassword = async (_passwords: { current: string; new: string }) => {
     try {
       // Password change would require a specific backend endpoint
+      // Use _passwords.current and _passwords.new when backend is implemented
       showToast({ type: 'info', message: 'Password change requires backend implementation' })
       setIsChangePasswordOpen(false)
     } catch (err: any) {

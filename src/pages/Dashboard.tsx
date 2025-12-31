@@ -75,9 +75,9 @@ export const Dashboard: React.FC = () => {
     }
   }
 
-  const handleCreateUser = async (userData: Partial<User>) => {
+  const handleCreateUser = async (_userData: Partial<User>) => {
     try {
-      // In a real app, you'd call the API here
+      // In a real app, you'd call the API here with _userData
       // For now, refresh the user list
       showToast({ type: 'info', message: 'User creation requires admin backend access' })
       const usersRes = await userService.getAll({ limit: 5 })

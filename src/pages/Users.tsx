@@ -129,22 +129,6 @@ export const Users: React.FC = () => {
     }
   }
 
-  const handleToggleStatus = async (user: APIUser) => {
-    try {
-      await userService.toggleStatus(user._id)
-      showToast({
-        type: 'success',
-        message: `User ${user.isActive ? 'deactivated' : 'activated'} successfully`
-      })
-
-      // Reload users list
-      await loadUsers()
-    } catch (err: any) {
-      console.error('Failed to toggle user status:', err)
-      showToast({ type: 'error', message: err.response?.data?.error || 'Failed to toggle status' })
-    }
-  }
-
   const handleViewUser = (user: APIUser) => {
     setSelectedUser(user)
     setIsViewModalOpen(true)
