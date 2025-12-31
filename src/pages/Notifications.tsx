@@ -148,11 +148,13 @@ export const Notifications: React.FC = () => {
 
     return {
       id: apiNotif._id,
+      type: apiNotif.type || 'system',
       icon: apiNotif.type || 'Bell',
       title: apiNotif.title,
       description: apiNotif.message,
       time: getTimeAgo(apiNotif.createdAt),
-      read: apiNotif.isRead
+      read: apiNotif.isRead,
+      createdAt: apiNotif.createdAt
     }
   }
 

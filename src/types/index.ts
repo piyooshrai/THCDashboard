@@ -70,6 +70,7 @@ export interface Document {
   id: string
   fileName: string
   fileType: string
+  mimeType?: string
   size: string
   uploadedBy: string
   uploadedByAvatar: string

@@ -4,6 +4,7 @@ export interface Document {
   _id: string;
   name: string;
   type: string;
+  mimeType: string;
   size: number;
   uploadedBy: string;
   clientId?: string;
