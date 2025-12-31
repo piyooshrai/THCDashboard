@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Header } from '../components/layout/Header'
 import { Card } from '../components/common/Card'
@@ -7,127 +7,237 @@ import { Table } from '../components/common/Table'
 import { Badge } from '../components/common/Badge'
 import { Button } from '../components/common/Button'
 import { useToast } from '../components/common/Toast'
+import { LoadingSpinner } from '../components/LoadingSpinner'
+import { ErrorMessage } from '../components/ErrorMessage'
 import { ClientFormModal } from '../components/modals/ClientFormModal'
 import { ViewClientROIModal } from '../components/modals/ViewClientROIModal'
 import { ConfirmationModal } from '../components/modals/ConfirmationModal'
 import { Building2, Users, TrendingUp, Eye, Edit, Trash2, Filter, ExternalLink } from 'lucide-react'
-import { mockClients } from '../data/mockData'
+import { clientService, Client as APIClient, ROICalculation } from '../services/clientService'
 import type { Client } from '../types'
 
 export const Clients: React.FC = () => {
   const navigate = useNavigate()
   const { showToast } = useToast()
-  const [clients, setClients] = useState(mockClients)
+
+  // State
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [clients, setClients] = useState<APIClient[]>([])
+  const [clientROI, setClientROI] = useState<Record<string, ROICalculation>>({})
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isViewROIModalOpen, setIsViewROIModalOpen] = useState(false)
-  const [selectedClient, setSelectedClient] = useState<Client | null>(null)
+  const [selectedClient, setSelectedClient] = useState<APIClient | null>(null)
   const [deleteClientId, setDeleteClientId] = useState<string | null>(null)
 
+  // Load clients on mount
+  useEffect(() => {
+    loadClients()
+  }, [])
+
+  const loadClients = async () => {
+    try {
+      setLoading(true)
+      setError('')
+
+      const response = await clientService.getAll()
+      setClients(response.clients)
+
+      // Load ROI for each client
+      const roiData: Record<string, ROICalculation> = {}
+      for (const client of response.clients) {
+        try {
+          const roiResponse = await clientService.getROI(client._id, 'monthly')
+          roiData[client._id] = roiResponse.roi
+        } catch (err) {
+          console.error(`Failed to load ROI for client ${client._id}:`, err)
+          // Continue with other clients even if one fails
+        }
+      }
+      setClientROI(roiData)
+    } catch (err: any) {
+      console.error('Failed to load clients:', err)
+      setError(err.response?.data?.error || 'Failed to load clients')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Calculate stats
   const totalClients = clients.length
   const activeClients = clients.filter(c => c.status === 'active').length
-  const avgROI = clients.length > 0
-    ? Math.round(clients.reduce((sum, c) => sum + c.roi, 0) / clients.length)
+  const avgROI = Object.values(clientROI).length > 0
+    ? Math.round(
+        Object.values(clientROI).reduce((sum, roi) => sum + roi.roiPercentage, 0) /
+        Object.values(clientROI).length
+      )
     : 0
 
-  const handleCreateClient = (clientData: Partial<Client>) => {
-    console.log('Creating client:', clientData)
-    const newClient: Client = {
-      id: (clients.length + 1).toString(),
-      name: clientData.name || '',
-      email: clientData.email || '',
-      company: clientData.company || '',
-      industry: clientData.industry || '',
-      jobTitle: clientData.jobTitle || '',
-      location: clientData.location || '',
-      hourlyValue: clientData.hourlyValue || 0,
-      baselineHours: clientData.baselineHours || 0,
-      hoursReclaimed: 0,
-      vaHoursWorked: 0,
-      roi: 0,
-      status: clientData.status as 'active' | 'inactive',
-      avatar: clientData.name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'C'
+  const handleCreateClient = async (clientData: Partial<Client>) => {
+    try {
+      const createData = {
+        userId: clientData.email || '', // Will need to create user first in production
+        companyName: clientData.company || '',
+        industry: clientData.industry || '',
+        jobTitle: clientData.jobTitle || '',
+        locationState: clientData.location,
+        baselineAdminHoursPerWeek: clientData.baselineHours || 0,
+        hourlyValueOverride: clientData.hourlyValue,
+        status: (clientData.status as 'active' | 'inactive' | 'pending') || 'pending',
+      }
+
+      await clientService.create(createData)
+      showToast({ type: 'success', message: 'Client created successfully' })
+
+      // Reload clients list
+      await loadClients()
+      setIsAddModalOpen(false)
+    } catch (err: any) {
+      console.error('Failed to create client:', err)
+      showToast({ type: 'error', message: err.response?.data?.error || 'Failed to create client' })
     }
-    setClients([newClient, ...clients])
-    showToast({ type: 'success', message: 'Client created successfully' })
   }
 
-  const handleEditClient = (clientData: Partial<Client>) => {
+  const handleEditClient = async (clientData: Partial<Client>) => {
     if (!selectedClient) return
-    console.log('Editing client:', selectedClient.id, clientData)
-    setClients(clients.map(c =>
-      c.id === selectedClient.id
-        ? { ...c, ...clientData }
-        : c
-    ))
-    showToast({ type: 'success', message: 'Client updated successfully' })
-    setSelectedClient(null)
+
+    try {
+      const updateData = {
+        companyName: clientData.company,
+        industry: clientData.industry,
+        jobTitle: clientData.jobTitle,
+        locationState: clientData.location,
+        baselineAdminHoursPerWeek: clientData.baselineHours,
+        hourlyValueOverride: clientData.hourlyValue,
+        status: clientData.status as 'active' | 'inactive' | 'pending',
+      }
+
+      await clientService.update(selectedClient._id, updateData)
+      showToast({ type: 'success', message: 'Client updated successfully' })
+
+      // Reload clients list
+      await loadClients()
+      setIsEditModalOpen(false)
+      setSelectedClient(null)
+    } catch (err: any) {
+      console.error('Failed to update client:', err)
+      showToast({ type: 'error', message: err.response?.data?.error || 'Failed to update client' })
+    }
   }
 
-  const handleDeleteClient = () => {
+  const handleDeleteClient = async () => {
     if (!deleteClientId) return
-    console.log('Deleting client:', deleteClientId)
-    setClients(clients.filter(c => c.id !== deleteClientId))
-    showToast({ type: 'success', message: 'Client deleted successfully' })
-    setDeleteClientId(null)
+
+    try {
+      await clientService.delete(deleteClientId)
+      showToast({ type: 'success', message: 'Client deleted successfully' })
+
+      // Reload clients list
+      await loadClients()
+      setDeleteClientId(null)
+    } catch (err: any) {
+      console.error('Failed to delete client:', err)
+      showToast({ type: 'error', message: err.response?.data?.error || 'Failed to delete client' })
+    }
   }
 
-  const handleViewROI = (client: Client) => {
+  const handleViewROI = (client: APIClient) => {
     setSelectedClient(client)
     setIsViewROIModalOpen(true)
   }
 
-  const handleEditClick = (client: Client) => {
+  const handleEditClick = (client: APIClient) => {
     setSelectedClient(client)
     setIsEditModalOpen(true)
+  }
+
+  // Convert API client to legacy Client format for modals
+  const convertToLegacyClient = (apiClient: APIClient | null): Client | undefined => {
+    if (!apiClient) return undefined
+
+    const roi = clientROI[apiClient._id]
+
+    return {
+      id: apiClient._id,
+      name: apiClient.userId, // Will need to fetch actual user name in production
+      email: apiClient.userId,
+      company: apiClient.companyName,
+      industry: apiClient.industry,
+      jobTitle: apiClient.jobTitle,
+      location: apiClient.locationState || '',
+      hourlyValue: apiClient.hourlyValueOverride || apiClient.calculatedHourlyValue,
+      baselineHours: apiClient.baselineAdminHoursPerWeek,
+      hoursReclaimed: roi?.hoursReclaimed || 0,
+      vaHoursWorked: 0, // Would need to calculate from time logs
+      roi: roi?.roiPercentage || 0,
+      status: apiClient.status,
+      avatar: apiClient.companyName?.substring(0, 2).toUpperCase() || 'CL'
+    }
   }
 
   const columns = [
     {
       header: 'Client',
-      accessor: (row: Client) => (
+      accessor: (row: APIClient) => (
         <div className="flex items-center gap-3 cursor-pointer" onClick={() => handleViewROI(row)}>
           <div className="w-10 h-10 rounded-full bg-accent text-white flex items-center justify-center font-semibold text-sm">
-            {row.avatar}
+            {row.companyName?.substring(0, 2).toUpperCase() || 'CL'}
           </div>
           <div>
-            <p className="font-semibold text-black">{row.name}</p>
-            <p className="text-sm text-gray-500">{row.company}</p>
+            <p className="font-semibold text-black">{row.companyName}</p>
+            <p className="text-sm text-gray-500">{row.industry}</p>
           </div>
         </div>
       )
     },
     {
       header: 'Industry',
-      accessor: 'industry' as keyof Client,
+      accessor: (row: APIClient) => (
+        <span className="text-gray-600">{row.industry}</span>
+      ),
       className: 'text-gray-600'
     },
     {
       header: 'Hourly Value',
-      accessor: (row: Client) => <span className="text-gray-600">${row.hourlyValue}/hr</span>
+      accessor: (row: APIClient) => (
+        <span className="text-gray-600">
+          ${row.hourlyValueOverride || row.calculatedHourlyValue}/hr
+        </span>
+      )
     },
     {
       header: 'Hours Reclaimed',
-      accessor: (row: Client) => (
-        <span className="font-semibold text-primary">{row.hoursReclaimed}h</span>
-      )
+      accessor: (row: APIClient) => {
+        const roi = clientROI[row._id]
+        return (
+          <span className="font-semibold text-primary">
+            {roi?.hoursReclaimed?.toFixed(1) || '0.0'}h
+          </span>
+        )
+      }
     },
     {
       header: 'ROI',
-      accessor: (row: Client) => (
-        <span className="font-bold text-success">{row.roi}%</span>
-      )
+      accessor: (row: APIClient) => {
+        const roi = clientROI[row._id]
+        return (
+          <span className="font-bold text-success">
+            {roi?.roiPercentage?.toFixed(0) || '0'}%
+          </span>
+        )
+      }
     },
     {
       header: 'Status',
-      accessor: (row: Client) => <Badge status={row.status} />
+      accessor: (row: APIClient) => <Badge status={row.status} />
     },
     {
       header: 'Actions',
-      accessor: (row: Client) => (
+      accessor: (row: APIClient) => (
         <div className="flex items-center gap-2">
           <button
-            onClick={(e) => { e.stopPropagation(); navigate(`/client-portal/${row.id}`) }}
+            onClick={(e) => { e.stopPropagation(); navigate(`/client-portal/${row._id}`) }}
             className="p-2 hover:bg-background rounded-lg transition-colors"
             title="View Client Portal"
           >
@@ -148,7 +258,7 @@ export const Clients: React.FC = () => {
             <Edit className="w-4 h-4 text-gray-600" />
           </button>
           <button
-            onClick={(e) => { e.stopPropagation(); setDeleteClientId(row.id) }}
+            onClick={(e) => { e.stopPropagation(); setDeleteClientId(row._id) }}
             className="p-2 hover:bg-background rounded-lg transition-colors"
             title="Delete"
           >
@@ -158,6 +268,14 @@ export const Clients: React.FC = () => {
       )
     }
   ]
+
+  if (loading) {
+    return <LoadingSpinner message="Loading clients..." />
+  }
+
+  if (error) {
+    return <ErrorMessage message={error} onRetry={loadClients} />
+  }
 
   return (
     <div className="h-screen flex flex-col overflow-hidden">
@@ -205,7 +323,14 @@ export const Clients: React.FC = () => {
             All Clients
           </h2>
           <div className="flex-1 overflow-y-auto">
-            <Table columns={columns} data={clients} />
+            {clients.length > 0 ? (
+              <Table columns={columns} data={clients} />
+            ) : (
+              <div className="text-center py-12">
+                <p className="text-gray-500 text-lg">No clients found</p>
+                <p className="text-gray-400 text-sm mt-2">Add a new client to get started</p>
+              </div>
+            )}
           </div>
         </Card>
       </div>
@@ -225,7 +350,7 @@ export const Clients: React.FC = () => {
           setSelectedClient(null)
         }}
         onSubmit={handleEditClient}
-        client={selectedClient || undefined}
+        client={convertToLegacyClient(selectedClient)}
         mode="edit"
       />
 
@@ -235,7 +360,7 @@ export const Clients: React.FC = () => {
           setIsViewROIModalOpen(false)
           setSelectedClient(null)
         }}
-        client={selectedClient}
+        client={convertToLegacyClient(selectedClient) || null}
       />
 
       <ConfirmationModal

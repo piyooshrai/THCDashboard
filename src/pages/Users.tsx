@@ -1,83 +1,154 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Header } from '../components/layout/Header'
 import { Card } from '../components/common/Card'
 import { Table } from '../components/common/Table'
 import { Badge } from '../components/common/Badge'
 import { Button } from '../components/common/Button'
 import { useToast } from '../components/common/Toast'
+import { LoadingSpinner } from '../components/LoadingSpinner'
+import { ErrorMessage } from '../components/ErrorMessage'
 import { UserFormModal } from '../components/modals/UserFormModal'
 import { UserDetailsModal } from '../components/modals/UserDetailsModal'
 import { ConfirmationModal } from '../components/modals/ConfirmationModal'
 import { Eye, Edit, Trash2, Filter } from 'lucide-react'
-import { mockUsers } from '../data/mockData'
+import { userService, User as APIUser } from '../services/userService'
+import { authService, RegisterData } from '../services/authService'
 import type { User } from '../types'
 
 export const Users: React.FC = () => {
   const { showToast } = useToast()
-  const [users, setUsers] = useState(mockUsers)
-  const [activeTab, setActiveTab] = useState<'all' | 'clients' | 'vas' | 'admins'>('all')
+
+  // State
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [users, setUsers] = useState<APIUser[]>([])
+  const [activeTab, setActiveTab] = useState<'all' | 'client' | 'va' | 'admin'>('all')
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isViewModalOpen, setIsViewModalOpen] = useState(false)
-  const [selectedUser, setSelectedUser] = useState<User | null>(null)
+  const [selectedUser, setSelectedUser] = useState<APIUser | null>(null)
   const [deleteUserId, setDeleteUserId] = useState<string | null>(null)
+
+  // Load users on mount and when tab changes
+  useEffect(() => {
+    loadUsers()
+  }, [activeTab])
+
+  const loadUsers = async () => {
+    try {
+      setLoading(true)
+      setError('')
+
+      const params = activeTab === 'all' ? {} : { role: activeTab }
+      const response = await userService.getAll(params)
+      setUsers(response.users)
+    } catch (err: any) {
+      console.error('Failed to load users:', err)
+      setError(err.response?.data?.error || 'Failed to load users')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const filteredUsers = users.filter((user) => {
     if (activeTab === 'all') return true
-    if (activeTab === 'clients') return user.role === 'client'
-    if (activeTab === 'vas') return user.role === 'va'
-    if (activeTab === 'admins') return user.role === 'admin'
-    return true
+    return user.role === activeTab
   })
 
   const tabs = [
-    { key: 'all' as const, label: 'All Users', count: users.length },
-    { key: 'clients' as const, label: 'Clients', count: users.filter(u => u.role === 'client').length },
-    { key: 'vas' as const, label: 'Virtual Assistants', count: users.filter(u => u.role === 'va').length },
-    { key: 'admins' as const, label: 'Admins', count: users.filter(u => u.role === 'admin').length }
+    { key: 'all' as const, label: 'All Users', count: users.filter(u => activeTab === 'all' || u.role === activeTab).length },
+    { key: 'client' as const, label: 'Clients', count: users.filter(u => u.role === 'client').length },
+    { key: 'va' as const, label: 'Virtual Assistants', count: users.filter(u => u.role === 'va').length },
+    { key: 'admin' as const, label: 'Admins', count: users.filter(u => u.role === 'admin').length }
   ]
 
-  const handleCreateUser = (userData: Partial<User>) => {
-    console.log('Creating user:', userData)
-    const newUser: User = {
-      id: (users.length + 1).toString(),
-      name: userData.name || '',
-      email: userData.email || '',
-      role: userData.role as 'client' | 'va' | 'admin',
-      status: userData.status as 'active' | 'inactive' | 'pending',
-      joined: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      avatar: userData.name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'
+  const handleCreateUser = async (userData: Partial<User>) => {
+    try {
+      // Create user via auth service (registration)
+      const registerData: RegisterData = {
+        firstName: userData.name?.split(' ')[0] || '',
+        lastName: userData.name?.split(' ').slice(1).join(' ') || '',
+        email: userData.email || '',
+        password: 'TempPass123!', // Temporary password - should be changed on first login
+        role: (userData.role as 'admin' | 'client' | 'va') || 'client',
+        phone: userData.phone,
+      }
+
+      await authService.register(registerData)
+      showToast({ type: 'success', message: 'User created successfully' })
+
+      // Reload users list
+      await loadUsers()
+      setIsAddModalOpen(false)
+    } catch (err: any) {
+      console.error('Failed to create user:', err)
+      showToast({ type: 'error', message: err.response?.data?.error || 'Failed to create user' })
     }
-    setUsers([newUser, ...users])
-    showToast({ type: 'success', message: 'User created successfully' })
   }
 
-  const handleEditUser = (userData: Partial<User>) => {
+  const handleEditUser = async (userData: Partial<User>) => {
     if (!selectedUser) return
-    console.log('Editing user:', selectedUser.id, userData)
-    setUsers(users.map(u =>
-      u.id === selectedUser.id
-        ? { ...u, ...userData }
-        : u
-    ))
-    showToast({ type: 'success', message: 'User updated successfully' })
-    setSelectedUser(null)
+
+    try {
+      const updateData = {
+        firstName: userData.name?.split(' ')[0],
+        lastName: userData.name?.split(' ').slice(1).join(' '),
+        email: userData.email,
+        phone: userData.phone,
+        isActive: userData.status === 'active',
+      }
+
+      await userService.update(selectedUser._id, updateData)
+      showToast({ type: 'success', message: 'User updated successfully' })
+
+      // Reload users list
+      await loadUsers()
+      setIsEditModalOpen(false)
+      setSelectedUser(null)
+    } catch (err: any) {
+      console.error('Failed to update user:', err)
+      showToast({ type: 'error', message: err.response?.data?.error || 'Failed to update user' })
+    }
   }
 
-  const handleDeleteUser = () => {
+  const handleDeleteUser = async () => {
     if (!deleteUserId) return
-    console.log('Deleting user:', deleteUserId)
-    setUsers(users.filter(u => u.id !== deleteUserId))
-    showToast({ type: 'success', message: 'User deleted successfully' })
-    setDeleteUserId(null)
+
+    try {
+      await userService.delete(deleteUserId)
+      showToast({ type: 'success', message: 'User deleted successfully' })
+
+      // Reload users list
+      await loadUsers()
+      setDeleteUserId(null)
+    } catch (err: any) {
+      console.error('Failed to delete user:', err)
+      showToast({ type: 'error', message: err.response?.data?.error || 'Failed to delete user' })
+    }
   }
 
-  const handleViewUser = (user: User) => {
+  const handleToggleStatus = async (user: APIUser) => {
+    try {
+      await userService.toggleStatus(user._id)
+      showToast({
+        type: 'success',
+        message: `User ${user.isActive ? 'deactivated' : 'activated'} successfully`
+      })
+
+      // Reload users list
+      await loadUsers()
+    } catch (err: any) {
+      console.error('Failed to toggle user status:', err)
+      showToast({ type: 'error', message: err.response?.data?.error || 'Failed to toggle status' })
+    }
+  }
+
+  const handleViewUser = (user: APIUser) => {
     setSelectedUser(user)
     setIsViewModalOpen(true)
   }
 
-  const handleEditClick = (user: User) => {
+  const handleEditClick = (user: APIUser) => {
     setSelectedUser(user)
     setIsEditModalOpen(true)
   }
@@ -87,16 +158,35 @@ export const Users: React.FC = () => {
     setIsEditModalOpen(true)
   }
 
+  // Convert API user to legacy User format for modals
+  const convertToLegacyUser = (apiUser: APIUser | null): User | undefined => {
+    if (!apiUser) return undefined
+    return {
+      id: apiUser._id,
+      name: `${apiUser.firstName} ${apiUser.lastName}`,
+      email: apiUser.email,
+      role: apiUser.role,
+      status: apiUser.isActive ? 'active' : 'inactive',
+      joined: new Date(apiUser.createdAt).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      }),
+      avatar: `${apiUser.firstName?.charAt(0)}${apiUser.lastName?.charAt(0)}`.toUpperCase(),
+      phone: apiUser.phone
+    }
+  }
+
   const columns = [
     {
       header: 'User',
-      accessor: (row: User) => (
+      accessor: (row: APIUser) => (
         <div className="flex items-center gap-3 cursor-pointer" onClick={() => handleViewUser(row)}>
           <div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-semibold text-sm">
-            {row.avatar}
+            {row.firstName?.charAt(0)}{row.lastName?.charAt(0)}
           </div>
           <div>
-            <p className="font-semibold text-black">{row.name}</p>
+            <p className="font-semibold text-black">{row.firstName} {row.lastName}</p>
             <p className="text-sm text-gray-500">{row.email}</p>
           </div>
         </div>
@@ -104,7 +194,7 @@ export const Users: React.FC = () => {
     },
     {
       header: 'Role',
-      accessor: (row: User) => (
+      accessor: (row: APIUser) => (
         <span className="text-gray-600 capitalize">
           {row.role === 'va' ? 'Virtual Assistant' : row.role}
         </span>
@@ -112,16 +202,26 @@ export const Users: React.FC = () => {
     },
     {
       header: 'Status',
-      accessor: (row: User) => <Badge status={row.status} />
+      accessor: (row: APIUser) => (
+        <Badge status={row.isActive ? 'active' : 'inactive'} />
+      )
     },
     {
       header: 'Joined Date',
-      accessor: 'joined' as keyof User,
+      accessor: (row: APIUser) => (
+        <span className="text-gray-500">
+          {new Date(row.createdAt).toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric'
+          })}
+        </span>
+      ),
       className: 'text-gray-500'
     },
     {
       header: 'Actions',
-      accessor: (row: User) => (
+      accessor: (row: APIUser) => (
         <div className="flex items-center gap-2">
           <button
             onClick={(e) => { e.stopPropagation(); handleViewUser(row) }}
@@ -138,7 +238,7 @@ export const Users: React.FC = () => {
             <Edit className="w-4 h-4 text-gray-600" />
           </button>
           <button
-            onClick={(e) => { e.stopPropagation(); setDeleteUserId(row.id) }}
+            onClick={(e) => { e.stopPropagation(); setDeleteUserId(row._id) }}
             className="p-2 hover:bg-background rounded-lg transition-colors"
             title="Delete"
           >
@@ -148,6 +248,14 @@ export const Users: React.FC = () => {
       )
     }
   ]
+
+  if (loading) {
+    return <LoadingSpinner message="Loading users..." />
+  }
+
+  if (error) {
+    return <ErrorMessage message={error} onRetry={loadUsers} />
+  }
 
   return (
     <div className="h-screen flex flex-col overflow-hidden">
@@ -191,7 +299,14 @@ export const Users: React.FC = () => {
           </div>
 
           <div className="flex-1 overflow-y-auto">
-            <Table columns={columns} data={filteredUsers} />
+            {filteredUsers.length > 0 ? (
+              <Table columns={columns} data={filteredUsers} />
+            ) : (
+              <div className="text-center py-12">
+                <p className="text-gray-500 text-lg">No users found</p>
+                <p className="text-gray-400 text-sm mt-2">Add a new user to get started</p>
+              </div>
+            )}
           </div>
         </Card>
       </div>
@@ -211,7 +326,7 @@ export const Users: React.FC = () => {
           setSelectedUser(null)
         }}
         onSubmit={handleEditUser}
-        user={selectedUser || undefined}
+        user={convertToLegacyUser(selectedUser)}
         mode="edit"
       />
 
@@ -222,7 +337,7 @@ export const Users: React.FC = () => {
           setSelectedUser(null)
         }}
         onEdit={handleEditFromView}
-        user={selectedUser}
+        user={convertToLegacyUser(selectedUser) || null}
       />
 
       <ConfirmationModal
