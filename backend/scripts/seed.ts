@@ -217,16 +217,37 @@ const seedDatabase = async () => {
       comment: 'David does great work on social media. Very creative!'
     });
 
-    logger.info('✅ Database seeded successfully!');
-    logger.info('\n📊 Summary:');
-    logger.info(`   - Admin: admin@thehc.com / Admin123!`);
-    logger.info(`   - Client 1: john@example.com / Client123!`);
-    logger.info(`   - Client 2: jane@example.com / Client123!`);
-    logger.info(`   - VA 1: maria@thehc.com / VA123!`);
-    logger.info(`   - VA 2: david@thehc.com / VA123!`);
-    logger.info(`   - ${await TimeLog.countDocuments()} time logs created`);
-    logger.info(`   - ${await Invoice.countDocuments()} invoices created`);
-    logger.info(`   - ${await Feedback.countDocuments()} feedback entries created`);
+    // Get counts
+    const userCount = await User.countDocuments();
+    const clientCount = await Client.countDocuments();
+    const vaCount = await VA.countDocuments();
+    const timeLogCount = await TimeLog.countDocuments();
+    const invoiceCount = await Invoice.countDocuments();
+    const feedbackCount = await Feedback.countDocuments();
+
+    // Print success message
+    console.log('\n' + '='.repeat(60));
+    console.log('✅ Database Seeded Successfully');
+    console.log('='.repeat(60));
+
+    console.log('\n📊 Created:');
+    console.log(`   - ${userCount} Users (1 Admin, ${clientCount} Clients, ${vaCount} VAs)`);
+    console.log(`   - ${clientCount} Client profiles`);
+    console.log(`   - ${vaCount} VA profiles`);
+    console.log(`   - ${timeLogCount} Time logs`);
+    console.log(`   - ${invoiceCount} Invoices`);
+    console.log(`   - ${feedbackCount} Feedback entries`);
+
+    console.log('\n🔑 Login Credentials:');
+    console.log('   Admin:    admin@thehc.com / Admin123!');
+    console.log('   Client 1: john@example.com / Client123!');
+    console.log('   Client 2: jane@example.com / Client123!');
+    console.log('   VA 1:     maria@thehc.com / VA123!');
+    console.log('   VA 2:     david@thehc.com / VA123!');
+
+    console.log('\n🚀 Ready to test at: http://localhost:5000/api/v1');
+    console.log('='.repeat(60));
+    console.log('');
 
     await disconnectDatabase();
     process.exit(0);

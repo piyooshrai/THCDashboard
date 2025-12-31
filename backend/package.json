@@ -9,8 +9,11 @@
     "start": "node dist/server.js",
     "test": "jest --coverage",
     "test:watch": "jest --watch",
+    "check": "ts-node scripts/check-setup.ts",
     "seed": "ts-node scripts/seed.ts",
     "verify": "ts-node scripts/verify.ts",
+    "integration": "ts-node scripts/integration-test.ts",
+    "test:all": "npm run check && npm run seed && npm run verify && npm run integration",
     "lint": "eslint src/**/*.ts",
     "format": "prettier --write src/**/*.ts"
   },
