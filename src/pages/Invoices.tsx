@@ -12,9 +12,9 @@ import { InvoiceFormModal } from '../components/modals/InvoiceFormModal'
 import { ViewInvoiceModal } from '../components/modals/ViewInvoiceModal'
 import { MarkAsPaidModal } from '../components/modals/MarkAsPaidModal'
 import { ConfirmationModal } from '../components/modals/ConfirmationModal'
-import { Receipt, DollarSign, Clock, AlertCircle, Eye, Edit, CheckCircle, Trash2, ExternalLink, Plus } from 'lucide-react'
-import { invoiceService, Invoice as APIInvoice, InvoiceStats } from '../services/invoiceService'
-import { clientService } from '../services/clientService'
+import { Receipt, DollarSign, Clock, AlertCircle, Eye, Edit, CheckCircle, Trash2, Plus } from 'lucide-react'
+import { invoiceService } from '../services/invoiceService'
+import type { Invoice as APIInvoice, InvoiceStats } from '../services/invoiceService'
 import type { Invoice } from '../types'
 
 export const Invoices: React.FC = () => {
@@ -25,7 +25,6 @@ export const Invoices: React.FC = () => {
   const [error, setError] = useState('')
   const [invoices, setInvoices] = useState<APIInvoice[]>([])
   const [stats, setStats] = useState<InvoiceStats | null>(null)
-  const [clients, setClients] = useState<any[]>([])
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isViewModalOpen, setIsViewModalOpen] = useState(false)
@@ -36,7 +35,6 @@ export const Invoices: React.FC = () => {
   // Load invoices on mount
   useEffect(() => {
     loadInvoices()
-    loadClients()
   }, [])
 
   const loadInvoices = async () => {
@@ -56,15 +54,6 @@ export const Invoices: React.FC = () => {
       setError(err.response?.data?.error || 'Failed to load invoices')
     } finally {
       setLoading(false)
-    }
-  }
-
-  const loadClients = async () => {
-    try {
-      const response = await clientService.getAll()
-      setClients(response.clients)
-    } catch (err) {
-      console.error('Failed to load clients:', err)
     }
   }
 

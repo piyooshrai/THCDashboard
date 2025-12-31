@@ -35,8 +35,8 @@ export const Analytics: React.FC = () => {
 
       const [dashboardRes, revenueRes, topVAsRes, clientsRes] = await Promise.all([
         analyticsService.getDashboard(),
-        analyticsService.getRevenueByMonth({ months: 6 }),
-        analyticsService.getTopVAs({ limit: 5 }),
+        analyticsService.getRevenueByMonth(6),
+        analyticsService.getTopVAs(5),
         clientService.getAll()
       ])
 
@@ -58,7 +58,6 @@ export const Analytics: React.FC = () => {
 
   // Calculate analytics metrics
   const totalHoursLogged = dashboardStats?.totalHoursLogged || 0
-  const totalRevenue = dashboardStats?.totalRevenue || 0
   const averageHourlyRate = 65 // Default client hourly value
   const vaCost = 60 // Default VA hourly cost
   const totalValueReclaimed = totalHoursLogged * averageHourlyRate

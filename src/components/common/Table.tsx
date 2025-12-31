@@ -12,7 +12,7 @@ interface TableProps<T> {
   onRowClick?: (row: T) => void
 }
 
-export function Table<T extends { id: string | number }>({
+export function Table<T extends { id?: string | number; _id?: string }>({
   columns,
   data,
   onRowClick
@@ -22,6 +22,12 @@ export function Table<T extends { id: string | number }>({
       return column.accessor(row)
     }
     return row[column.accessor] as React.ReactNode
+  }
+
+  const getRowKey = (row: T, index: number): string => {
+    if (row.id !== undefined) return String(row.id)
+    if (row._id !== undefined) return String(row._id)
+    return String(index)
   }
 
   return (
@@ -40,9 +46,9 @@ export function Table<T extends { id: string | number }>({
           </tr>
         </thead>
         <tbody>
-          {data.map((row) => (
+          {data.map((row, index) => (
             <tr
-              key={row.id}
+              key={getRowKey(row, index)}
               onClick={() => onRowClick?.(row)}
               className={`border-b border-gray-100 transition-colors ${
                 onRowClick ? 'cursor-pointer hover:bg-background' : ''

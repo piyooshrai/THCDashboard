@@ -11,7 +11,6 @@ import { GenerateReportModal } from '../components/modals/GenerateReportModal'
 import { ViewReportModal } from '../components/modals/ViewReportModal'
 import { Eye, Download, RefreshCw, Plus } from 'lucide-react'
 import { reportService } from '../services/reportService'
-import { clientService } from '../services/clientService'
 import type { Report } from '../types'
 
 export const Reports: React.FC = () => {
@@ -21,7 +20,6 @@ export const Reports: React.FC = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [reports, setReports] = useState<any[]>([])
-  const [clients, setClients] = useState<any[]>([])
   const [activeTab, setActiveTab] = useState<'weekly' | 'monthly' | 'custom'>('weekly')
   const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false)
   const [isViewModalOpen, setIsViewModalOpen] = useState(false)
@@ -30,7 +28,6 @@ export const Reports: React.FC = () => {
   // Load reports on mount
   useEffect(() => {
     loadReports()
-    loadClients()
   }, [])
 
   const loadReports = async () => {
@@ -48,15 +45,6 @@ export const Reports: React.FC = () => {
     }
   }
 
-  const loadClients = async () => {
-    try {
-      const response = await clientService.getAll()
-      setClients(response.clients)
-    } catch (err) {
-      console.error('Failed to load clients:', err)
-    }
-  }
-
   const filteredReports = reports.filter((report) => {
     return report.reportType === activeTab
   })
@@ -69,11 +57,16 @@ export const Reports: React.FC = () => {
 
   const handleGenerateReport = async (data: { clientId: string; type: string; periodStart: string; periodEnd: string }) => {
     try {
-      await reportService.generate({
+      await reportService.create({
+        title: `${data.type.charAt(0).toUpperCase() + data.type.slice(1)} Report`,
+        type: 'custom' as const,
         clientId: data.clientId,
-        reportType: data.type as 'weekly' | 'monthly' | 'custom',
-        startDate: data.periodStart,
-        endDate: data.periodEnd
+        dateRange: {
+          start: data.periodStart,
+          end: data.periodEnd
+        },
+        generatedBy: 'system', // Would be current user ID in production
+        data: {}
       })
 
       showToast({ type: 'success', message: 'Report generated successfully' })
@@ -104,11 +97,16 @@ export const Reports: React.FC = () => {
 
   const handleRegenerate = async (report: any) => {
     try {
-      await reportService.generate({
+      await reportService.create({
+        title: report.title || 'Regenerated Report',
+        type: report.type || 'custom',
         clientId: report.clientId,
-        reportType: report.reportType,
-        startDate: report.startDate,
-        endDate: report.endDate
+        dateRange: report.dateRange || {
+          start: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+          end: new Date().toISOString()
+        },
+        generatedBy: 'system',
+        data: report.data || {}
       })
 
       showToast({ type: 'success', message: 'Report regeneration started' })

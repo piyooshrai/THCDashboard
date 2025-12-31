@@ -11,8 +11,10 @@ import { UserFormModal } from '../components/modals/UserFormModal'
 import { UserDetailsModal } from '../components/modals/UserDetailsModal'
 import { ConfirmationModal } from '../components/modals/ConfirmationModal'
 import { Eye, Edit, Trash2, Filter } from 'lucide-react'
-import { userService, User as APIUser } from '../services/userService'
-import { authService, RegisterData } from '../services/authService'
+import { userService } from '../services/userService'
+import type { User as APIUser } from '../services/userService'
+import { authService } from '../services/authService'
+import type { RegisterData } from '../services/authService'
 import type { User } from '../types'
 
 export const Users: React.FC = () => {
@@ -124,22 +126,6 @@ export const Users: React.FC = () => {
     } catch (err: any) {
       console.error('Failed to delete user:', err)
       showToast({ type: 'error', message: err.response?.data?.error || 'Failed to delete user' })
-    }
-  }
-
-  const handleToggleStatus = async (user: APIUser) => {
-    try {
-      await userService.toggleStatus(user._id)
-      showToast({
-        type: 'success',
-        message: `User ${user.isActive ? 'deactivated' : 'activated'} successfully`
-      })
-
-      // Reload users list
-      await loadUsers()
-    } catch (err: any) {
-      console.error('Failed to toggle user status:', err)
-      showToast({ type: 'error', message: err.response?.data?.error || 'Failed to toggle status' })
     }
   }
 
