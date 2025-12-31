@@ -1,15 +1,22 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Header } from '../components/layout/Header'
 import { Card } from '../components/common/Card'
 import { Input } from '../components/common/Input'
 import { Button } from '../components/common/Button'
+import { LoadingSpinner } from '../components/LoadingSpinner'
+import { ErrorMessage } from '../components/ErrorMessage'
 import { useToast } from '../components/common/Toast'
+import { useAuth } from '../contexts/AuthContext'
 import { ChangePasswordModal } from '../components/modals/ChangePasswordModal'
 import { ExportDataModal } from '../components/modals/ExportDataModal'
 import { DeleteAccountModal } from '../components/modals/DeleteAccountModal'
+import { authService } from '../services/authService'
+import { userService } from '../services/userService'
 
 interface SettingsState {
   email: string
+  firstName: string
+  lastName: string
   twoFactorAuth: boolean
   emailNotifications: boolean
   pushNotifications: boolean
@@ -23,8 +30,15 @@ interface SettingsState {
 
 export const Settings: React.FC = () => {
   const { showToast } = useToast()
+  const { user, refreshUser } = useAuth()
+
+  // State
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
   const [settings, setSettings] = useState<SettingsState>({
-    email: 'admin@thehumancapital.com',
+    email: user?.email || '',
+    firstName: user?.firstName || '',
+    lastName: user?.lastName || '',
     twoFactorAuth: false,
     emailNotifications: true,
     pushNotifications: true,
@@ -35,6 +49,18 @@ export const Settings: React.FC = () => {
     dateFormat: 'MM/DD/YYYY',
     vaHourlyRate: '60'
   })
+
+  // Update settings when user changes
+  useEffect(() => {
+    if (user) {
+      setSettings(prev => ({
+        ...prev,
+        email: user.email,
+        firstName: user.firstName || '',
+        lastName: user.lastName || ''
+      }))
+    }
+  }, [user])
 
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false)
   const [isExportDataOpen, setIsExportDataOpen] = useState(false)
@@ -54,24 +80,75 @@ export const Settings: React.FC = () => {
     })
   }
 
-  const handleSave = () => {
-    console.log('Saving settings:', settings)
-    showToast({ type: 'success', message: 'Settings saved successfully' })
+  const handleSave = async () => {
+    if (!user) return
+
+    try {
+      setLoading(true)
+      setError('')
+
+      // Update user profile
+      await userService.update(user.id, {
+        email: settings.email,
+        firstName: settings.firstName,
+        lastName: settings.lastName
+      })
+
+      showToast({ type: 'success', message: 'Settings saved successfully' })
+
+      // Refresh user data
+      await refreshUser()
+    } catch (err: any) {
+      console.error('Failed to save settings:', err)
+      setError(err.response?.data?.error || 'Failed to save settings')
+      showToast({ type: 'error', message: err.response?.data?.error || 'Failed to save settings' })
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const handleChangePassword = () => {
-    console.log('Changing password')
-    showToast({ type: 'success', message: 'Password changed successfully' })
+  const handleChangePassword = async (data: { currentPassword: string; newPassword: string }) => {
+    try {
+      // Password change would require a specific backend endpoint
+      showToast({ type: 'info', message: 'Password change requires backend implementation' })
+      setIsChangePasswordOpen(false)
+    } catch (err: any) {
+      console.error('Failed to change password:', err)
+      showToast({ type: 'error', message: 'Failed to change password' })
+    }
   }
 
   const handleExportData = () => {
-    console.log('Exporting data...')
-    showToast({ type: 'success', message: 'Data export started. Download will begin shortly.' })
+    showToast({ type: 'info', message: 'Data export requires backend implementation. Download will begin shortly.' })
+    setIsExportDataOpen(false)
   }
 
-  const handleDeleteAccount = () => {
-    console.log('Account deletion confirmed')
-    showToast({ type: 'error', message: 'Account deletion initiated' })
+  const handleDeleteAccount = async () => {
+    if (!user) return
+
+    try {
+      await userService.delete(user.id)
+      showToast({ type: 'error', message: 'Account deletion initiated' })
+      setIsDeleteAccountOpen(false)
+
+      // Logout after account deletion
+      setTimeout(() => {
+        authService.logout()
+        window.location.href = '/login'
+      }, 2000)
+    } catch (err: any) {
+      console.error('Failed to delete account:', err)
+      showToast({ type: 'error', message: 'Failed to delete account' })
+    }
+  }
+
+  const loadSettings = async () => {
+    // In a real app, would load user preferences from backend
+    // For now, settings are loaded from user object
+  }
+
+  if (error && !user) {
+    return <ErrorMessage message={error} onRetry={loadSettings} />
   }
 
   return (
@@ -90,6 +167,18 @@ export const Settings: React.FC = () => {
               Account Settings
             </h2>
             <div className="space-y-4 max-w-md">
+              <Input
+                label="First Name"
+                type="text"
+                value={settings.firstName}
+                onChange={(e) => handleInputChange('firstName', e.target.value)}
+              />
+              <Input
+                label="Last Name"
+                type="text"
+                value={settings.lastName}
+                onChange={(e) => handleInputChange('lastName', e.target.value)}
+              />
               <Input
                 label="Email Address"
                 type="email"
@@ -248,9 +337,9 @@ export const Settings: React.FC = () => {
           </Card>
 
           <div className="flex justify-end gap-3">
-            <Button variant="secondary">Cancel</Button>
-            <Button variant="primary" onClick={handleSave}>
-              Save Changes
+            <Button variant="secondary" disabled={loading}>Cancel</Button>
+            <Button variant="primary" onClick={handleSave} disabled={loading}>
+              {loading ? 'Saving...' : 'Save Changes'}
             </Button>
           </div>
         </div>

@@ -1,7 +1,9 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Header } from '../components/layout/Header'
 import { Card } from '../components/common/Card'
 import { Button } from '../components/common/Button'
+import { LoadingSpinner } from '../components/LoadingSpinner'
+import { ErrorMessage } from '../components/ErrorMessage'
 import { useToast } from '../components/common/Toast'
 import { ViewNotificationModal } from '../components/modals/ViewNotificationModal'
 import {
@@ -11,57 +13,126 @@ import {
   Bell,
   AlertCircle
 } from 'lucide-react'
-import { mockNotifications } from '../data/mockData'
+import { notificationService } from '../services/notificationService'
 import type { Notification } from '../types'
 
 export const Notifications: React.FC = () => {
   const { showToast } = useToast()
-  const [notifications, setNotifications] = useState(mockNotifications)
+
+  // State
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [notifications, setNotifications] = useState<any[]>([])
   const [isViewModalOpen, setIsViewModalOpen] = useState(false)
-  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null)
+  const [selectedNotification, setSelectedNotification] = useState<any | null>(null)
 
-  const handleMarkAllRead = () => {
-    console.log('Marking all as read')
-    setNotifications(notifications.map(n => ({ ...n, read: true })))
-    showToast({ type: 'success', message: 'All notifications marked as read' })
+  // Load notifications on mount
+  useEffect(() => {
+    loadNotifications()
+  }, [])
+
+  const loadNotifications = async () => {
+    try {
+      setLoading(true)
+      setError('')
+
+      const response = await notificationService.getAll()
+      setNotifications(response.notifications)
+    } catch (err: any) {
+      console.error('Failed to load notifications:', err)
+      setError(err.response?.data?.error || 'Failed to load notifications')
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const handleMarkRead = (id: string) => {
-    console.log('Marking notification as read:', id)
-    setNotifications(
-      notifications.map(n => (n.id === id ? { ...n, read: true } : n))
-    )
-    showToast({ type: 'success', message: 'Notification marked as read' })
+  const handleMarkAllRead = async () => {
+    try {
+      await notificationService.markAllAsRead()
+      showToast({ type: 'success', message: 'All notifications marked as read' })
+
+      // Reload notifications list
+      await loadNotifications()
+    } catch (err: any) {
+      console.error('Failed to mark all as read:', err)
+      showToast({ type: 'error', message: err.response?.data?.error || 'Failed to mark all as read' })
+    }
   }
 
-  const handleViewNotification = (notification: Notification) => {
+  const handleMarkRead = async (id: string) => {
+    try {
+      await notificationService.markAsRead(id)
+      showToast({ type: 'success', message: 'Notification marked as read' })
+
+      // Reload notifications list
+      await loadNotifications()
+    } catch (err: any) {
+      console.error('Failed to mark as read:', err)
+      showToast({ type: 'error', message: err.response?.data?.error || 'Failed to mark as read' })
+    }
+  }
+
+  const handleViewNotification = async (notification: any) => {
     setSelectedNotification(notification)
     setIsViewModalOpen(true)
+
+    // Mark as read when viewing
+    if (!notification.isRead) {
+      await handleMarkRead(notification._id)
+    }
   }
 
-  const getNotificationIcon = (iconName: string) => {
+  const getNotificationIcon = (type: string) => {
     const icons: Record<string, React.ElementType> = {
-      DollarSign,
-      FileText,
-      Users,
-      Bell,
-      AlertCircle
+      invoice: DollarSign,
+      document: FileText,
+      user: Users,
+      system: Bell,
+      alert: AlertCircle
     }
-    return icons[iconName] || Bell
+    return icons[type] || Bell
+  }
+
+  const getTimeAgo = (timestamp: string) => {
+    const now = new Date()
+    const notifDate = new Date(timestamp)
+    const diffMs = now.getTime() - notifDate.getTime()
+    const diffMins = Math.floor(diffMs / 60000)
+    const diffHours = Math.floor(diffMs / 3600000)
+    const diffDays = Math.floor(diffMs / 86400000)
+
+    if (diffMins < 60) {
+      return `${diffMins} minute${diffMins !== 1 ? 's' : ''} ago`
+    } else if (diffHours < 24) {
+      return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`
+    } else if (diffDays === 1) {
+      return 'Yesterday'
+    } else if (diffDays < 7) {
+      return `${diffDays} days ago`
+    } else {
+      return notifDate.toLocaleDateString()
+    }
   }
 
   const groupNotificationsByTime = () => {
-    const today: Notification[] = []
-    const yesterday: Notification[] = []
-    const thisWeek: Notification[] = []
-    const earlier: Notification[] = []
+    const today: any[] = []
+    const yesterday: any[] = []
+    const thisWeek: any[] = []
+    const earlier: any[] = []
+
+    const now = new Date()
 
     notifications.forEach((notification) => {
-      if (notification.time.includes('minute') || notification.time.includes('hour')) {
+      const notifDate = new Date(notification.createdAt)
+      const diffMs = now.getTime() - notifDate.getTime()
+      const diffHours = diffMs / 3600000
+      const diffDays = diffMs / 86400000
+
+      if (diffHours < 24) {
         today.push(notification)
-      } else if (notification.time.toLowerCase() === 'yesterday') {
+      } else if (diffDays < 2) {
         yesterday.push(notification)
-      } else if (notification.time.includes('day')) {
+      } else if (diffDays < 7) {
         thisWeek.push(notification)
       } else {
         earlier.push(notification)
@@ -71,16 +142,30 @@ export const Notifications: React.FC = () => {
     return { today, yesterday, thisWeek, earlier }
   }
 
+  // Convert API notification to legacy Notification format for modals
+  const convertToLegacyNotification = (apiNotif: any | null): Notification | null => {
+    if (!apiNotif) return null
+
+    return {
+      id: apiNotif._id,
+      icon: apiNotif.type || 'Bell',
+      title: apiNotif.title,
+      description: apiNotif.message,
+      time: getTimeAgo(apiNotif.createdAt),
+      read: apiNotif.isRead
+    }
+  }
+
   const grouped = groupNotificationsByTime()
 
-  const NotificationItem: React.FC<{ notification: Notification }> = ({ notification }) => {
-    const Icon = getNotificationIcon(notification.icon)
+  const NotificationItem: React.FC<{ notification: any }> = ({ notification }) => {
+    const Icon = getNotificationIcon(notification.type || 'system')
 
     return (
       <div
         onClick={() => handleViewNotification(notification)}
         className={`flex gap-4 p-4 rounded-lg transition-all cursor-pointer ${
-          notification.read
+          notification.isRead
             ? 'bg-white hover:bg-background'
             : 'bg-primary/5 hover:bg-primary/10'
         }`}
@@ -91,18 +176,18 @@ export const Notifications: React.FC = () => {
         <div className="flex-1">
           <div className="flex items-start justify-between mb-1">
             <p className="font-semibold text-black">{notification.title}</p>
-            {!notification.read && (
+            {!notification.isRead && (
               <div className="w-2 h-2 rounded-full bg-primary mt-1.5" />
             )}
           </div>
-          <p className="text-sm text-gray-600 mb-1">{notification.description}</p>
-          <p className="text-xs text-gray-400">{notification.time}</p>
+          <p className="text-sm text-gray-600 mb-1">{notification.message}</p>
+          <p className="text-xs text-gray-400">{getTimeAgo(notification.createdAt)}</p>
         </div>
       </div>
     )
   }
 
-  const NotificationGroup: React.FC<{ title: string; items: Notification[] }> = ({
+  const NotificationGroup: React.FC<{ title: string; items: any[] }> = ({
     title,
     items
   }) => {
@@ -115,11 +200,19 @@ export const Notifications: React.FC = () => {
         </h3>
         <div className="space-y-2">
           {items.map((notification) => (
-            <NotificationItem key={notification.id} notification={notification} />
+            <NotificationItem key={notification._id} notification={notification} />
           ))}
         </div>
       </div>
     )
+  }
+
+  if (loading) {
+    return <LoadingSpinner message="Loading notifications..." />
+  }
+
+  if (error) {
+    return <ErrorMessage message={error} onRetry={loadNotifications} />
   }
 
   return (
@@ -162,7 +255,7 @@ export const Notifications: React.FC = () => {
           setIsViewModalOpen(false)
           setSelectedNotification(null)
         }}
-        notification={selectedNotification}
+        notification={convertToLegacyNotification(selectedNotification)}
         onMarkRead={handleMarkRead}
       />
     </div>

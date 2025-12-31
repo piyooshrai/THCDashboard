@@ -1,26 +1,64 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Header } from '../components/layout/Header'
 import { Card } from '../components/common/Card'
 import { Table } from '../components/common/Table'
 import { Badge } from '../components/common/Badge'
 import { Button } from '../components/common/Button'
+import { LoadingSpinner } from '../components/LoadingSpinner'
+import { ErrorMessage } from '../components/ErrorMessage'
 import { useToast } from '../components/common/Toast'
 import { GenerateReportModal } from '../components/modals/GenerateReportModal'
 import { ViewReportModal } from '../components/modals/ViewReportModal'
 import { Eye, Download, RefreshCw, Plus } from 'lucide-react'
-import { mockReports } from '../data/mockData'
+import { reportService } from '../services/reportService'
+import { clientService } from '../services/clientService'
 import type { Report } from '../types'
 
 export const Reports: React.FC = () => {
   const { showToast } = useToast()
-  const [reports, setReports] = useState(mockReports)
+
+  // State
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [reports, setReports] = useState<any[]>([])
+  const [clients, setClients] = useState<any[]>([])
   const [activeTab, setActiveTab] = useState<'weekly' | 'monthly' | 'custom'>('weekly')
   const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false)
   const [isViewModalOpen, setIsViewModalOpen] = useState(false)
-  const [selectedReport, setSelectedReport] = useState<Report | null>(null)
+  const [selectedReport, setSelectedReport] = useState<any | null>(null)
+
+  // Load reports on mount
+  useEffect(() => {
+    loadReports()
+    loadClients()
+  }, [])
+
+  const loadReports = async () => {
+    try {
+      setLoading(true)
+      setError('')
+
+      const response = await reportService.getAll()
+      setReports(response.reports)
+    } catch (err: any) {
+      console.error('Failed to load reports:', err)
+      setError(err.response?.data?.error || 'Failed to load reports')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const loadClients = async () => {
+    try {
+      const response = await clientService.getAll()
+      setClients(response.clients)
+    } catch (err) {
+      console.error('Failed to load clients:', err)
+    }
+  }
 
   const filteredReports = reports.filter((report) => {
-    return report.type === activeTab
+    return report.reportType === activeTab
   })
 
   const tabs = [
@@ -29,99 +67,167 @@ export const Reports: React.FC = () => {
     { key: 'custom' as const, label: 'Custom Reports' }
   ]
 
-  const handleGenerateReport = (data: { clientId: string; type: string; periodStart: string; periodEnd: string }) => {
-    console.log('Generating report:', data)
-    const client = mockReports.find(r => r.clientId === data.clientId)
-    const newReport: Report = {
-      id: (reports.length + 1).toString(),
-      name: `${data.type.charAt(0).toUpperCase() + data.type.slice(1)} Report - ${client?.clientName || 'Client'}`,
-      clientId: data.clientId,
-      clientName: client?.clientName || 'Client',
-      type: data.type as 'weekly' | 'monthly' | 'custom',
-      periodStart: data.periodStart,
-      periodEnd: data.periodEnd,
-      status: 'generated',
-      createdAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      pdfUrl: '#'
+  const handleGenerateReport = async (data: { clientId: string; type: string; periodStart: string; periodEnd: string }) => {
+    try {
+      await reportService.generate({
+        clientId: data.clientId,
+        reportType: data.type as 'weekly' | 'monthly' | 'custom',
+        startDate: data.periodStart,
+        endDate: data.periodEnd
+      })
+
+      showToast({ type: 'success', message: 'Report generated successfully' })
+
+      // Reload reports list
+      await loadReports()
+      setIsGenerateModalOpen(false)
+    } catch (err: any) {
+      console.error('Failed to generate report:', err)
+      showToast({ type: 'error', message: err.response?.data?.error || 'Failed to generate report' })
     }
-    setReports([newReport, ...reports])
-    showToast({ type: 'success', message: 'Report generated successfully' })
   }
 
-  const handleViewReport = (report: Report) => {
+  const handleViewReport = (report: any) => {
     setSelectedReport(report)
     setIsViewModalOpen(true)
   }
 
-  const handleDownload = (report: Report) => {
-    console.log('Downloading report:', report.pdfUrl)
-    showToast({ type: 'success', message: `Downloading ${report.name}...` })
+  const handleDownload = async (report: any) => {
+    try {
+      await reportService.download(report._id)
+      showToast({ type: 'success', message: `Downloading ${report.reportType} report...` })
+    } catch (err: any) {
+      console.error('Failed to download report:', err)
+      showToast({ type: 'error', message: 'Failed to download report' })
+    }
   }
 
-  const handleRegenerate = (report: Report) => {
-    console.log('Regenerating report:', report.id)
-    showToast({ type: 'success', message: 'Report regeneration started' })
+  const handleRegenerate = async (report: any) => {
+    try {
+      await reportService.generate({
+        clientId: report.clientId,
+        reportType: report.reportType,
+        startDate: report.startDate,
+        endDate: report.endDate
+      })
+
+      showToast({ type: 'success', message: 'Report regeneration started' })
+
+      // Reload reports list
+      await loadReports()
+    } catch (err: any) {
+      console.error('Failed to regenerate report:', err)
+      showToast({ type: 'error', message: 'Failed to regenerate report' })
+    }
+  }
+
+  // Convert API report to legacy Report format for modals
+  const convertToLegacyReport = (apiReport: any | null): Report | null => {
+    if (!apiReport) return null
+
+    return {
+      id: apiReport._id,
+      name: `${apiReport.reportType.charAt(0).toUpperCase() + apiReport.reportType.slice(1)} Report`,
+      clientId: apiReport.clientId,
+      clientName: apiReport.clientId?.substring(0, 8) || 'Unknown',
+      type: apiReport.reportType,
+      periodStart: new Date(apiReport.startDate).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      }),
+      periodEnd: new Date(apiReport.endDate).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      }),
+      status: apiReport.status || 'generated',
+      createdAt: new Date(apiReport.createdAt).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      }),
+      pdfUrl: apiReport.s3Key || '#'
+    }
   }
 
   const columns = [
     {
       header: 'Report Name',
-      accessor: (row: Report) => (
+      accessor: (row: any) => (
         <div className="cursor-pointer" onClick={() => handleViewReport(row)}>
-          <span className="font-semibold text-black">{row.name}</span>
+          <span className="font-semibold text-black">
+            {row.reportType.charAt(0).toUpperCase() + row.reportType.slice(1)} Report
+          </span>
         </div>
       )
     },
     {
       header: 'Client',
-      accessor: 'clientName' as keyof Report,
+      accessor: (row: any) => (
+        <span className="text-gray-600">{row.clientId?.substring(0, 8) || 'Unknown'}</span>
+      ),
       className: 'text-gray-600'
     },
     {
       header: 'Period',
-      accessor: (row: Report) => (
+      accessor: (row: any) => (
         <span className="text-gray-600">
-          {row.periodStart} - {row.periodEnd}
+          {new Date(row.startDate).toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric'
+          })}{' '}
+          -{' '}
+          {new Date(row.endDate).toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric'
+          })}
         </span>
       )
     },
     {
       header: 'Type',
-      accessor: (row: Report) => (
-        <span className="text-gray-600 capitalize">{row.type}</span>
+      accessor: (row: any) => (
+        <span className="text-gray-600 capitalize">{row.reportType}</span>
       )
     },
     {
       header: 'Status',
-      accessor: (row: Report) => <Badge status={row.status} />
+      accessor: (row: any) => <Badge status={row.status || 'active'} />
     },
     {
       header: 'Created',
-      accessor: 'createdAt' as keyof Report,
+      accessor: (row: any) => (
+        <span className="text-gray-500">
+          {new Date(row.createdAt).toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric'
+          })}
+        </span>
+      ),
       className: 'text-gray-500'
     },
     {
       header: 'Actions',
-      accessor: (row: Report) => (
+      accessor: (row: any) => (
         <div className="flex items-center gap-2">
-          {row.pdfUrl && (
-            <>
-              <button
-                onClick={(e) => { e.stopPropagation(); handleViewReport(row) }}
-                className="p-2 hover:bg-background rounded-lg transition-colors"
-                title="View"
-              >
-                <Eye className="w-4 h-4 text-gray-600" />
-              </button>
-              <button
-                onClick={(e) => { e.stopPropagation(); handleDownload(row) }}
-                className="p-2 hover:bg-background rounded-lg transition-colors"
-                title="Download"
-              >
-                <Download className="w-4 h-4 text-gray-600" />
-              </button>
-            </>
-          )}
+          <button
+            onClick={(e) => { e.stopPropagation(); handleViewReport(row) }}
+            className="p-2 hover:bg-background rounded-lg transition-colors"
+            title="View"
+          >
+            <Eye className="w-4 h-4 text-gray-600" />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); handleDownload(row) }}
+            className="p-2 hover:bg-background rounded-lg transition-colors"
+            title="Download"
+          >
+            <Download className="w-4 h-4 text-gray-600" />
+          </button>
           <button
             onClick={(e) => { e.stopPropagation(); handleRegenerate(row) }}
             className="p-2 hover:bg-background rounded-lg transition-colors"
@@ -133,6 +239,14 @@ export const Reports: React.FC = () => {
       )
     }
   ]
+
+  if (loading) {
+    return <LoadingSpinner message="Loading reports..." />
+  }
+
+  if (error) {
+    return <ErrorMessage message={error} onRetry={loadReports} />
+  }
 
   return (
     <div className="h-screen flex flex-col overflow-hidden">
@@ -188,7 +302,7 @@ export const Reports: React.FC = () => {
           setIsViewModalOpen(false)
           setSelectedReport(null)
         }}
-        report={selectedReport}
+        report={convertToLegacyReport(selectedReport)}
       />
     </div>
   )
