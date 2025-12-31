@@ -2,6 +2,7 @@ export interface User {
   id: string
   name: string
   email: string
+  phone?: string
   role: 'client' | 'va' | 'admin'
   status: 'active' | 'inactive' | 'pending'
   joined: string
@@ -21,7 +22,7 @@ export interface Client {
   hoursReclaimed: number
   vaHoursWorked: number
   roi: number
-  status: 'active' | 'inactive'
+  status: 'active' | 'inactive' | 'pending'
   avatar: string
 }
 

@@ -11,7 +11,6 @@ import { GenerateReportModal } from '../components/modals/GenerateReportModal'
 import { ViewReportModal } from '../components/modals/ViewReportModal'
 import { Eye, Download, RefreshCw, Plus } from 'lucide-react'
 import { reportService } from '../services/reportService'
-import { clientService } from '../services/clientService'
 import type { Report } from '../types'
 
 export const Reports: React.FC = () => {
