@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Header } from '../components/layout/Header'
 import { Card } from '../components/common/Card'
 import { StatCard } from '../components/common/StatCard'
@@ -6,84 +6,152 @@ import { Table } from '../components/common/Table'
 import { Badge } from '../components/common/Badge'
 import { Button } from '../components/common/Button'
 import { useToast } from '../components/common/Toast'
+import { LoadingSpinner } from '../components/LoadingSpinner'
+import { ErrorMessage } from '../components/ErrorMessage'
 import { VAFormModal } from '../components/modals/VAFormModal'
 import { ViewVAPerformanceModal } from '../components/modals/ViewVAPerformanceModal'
 import { AssignClientModal } from '../components/modals/AssignClientModal'
 import { ConfirmationModal } from '../components/modals/ConfirmationModal'
 import { UserCheck, Users, Star, Eye, Edit, Trash2, Filter, UserPlus } from 'lucide-react'
-import { mockVAs } from '../data/mockData'
+import { vaService, VA as APIVA, VAPerformance } from '../services/vaService'
+import { feedbackService } from '../services/feedbackService'
 import type { VA } from '../types'
 
 export const VirtualAssistants: React.FC = () => {
   const { showToast } = useToast()
-  const [vas, setVas] = useState(mockVAs)
+
+  // State
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [vas, setVas] = useState<APIVA[]>([])
+  const [vaPerformance, setVaPerformance] = useState<Record<string, VAPerformance>>({})
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isViewModalOpen, setIsViewModalOpen] = useState(false)
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false)
-  const [selectedVA, setSelectedVA] = useState<VA | null>(null)
+  const [selectedVA, setSelectedVA] = useState<APIVA | null>(null)
   const [deleteVAId, setDeleteVAId] = useState<string | null>(null)
 
+  // Load VAs on mount
+  useEffect(() => {
+    loadVAs()
+  }, [])
+
+  const loadVAs = async () => {
+    try {
+      setLoading(true)
+      setError('')
+
+      const response = await vaService.getAll()
+      setVas(response.vas)
+
+      // Load performance for each VA
+      const performanceData: Record<string, VAPerformance> = {}
+      for (const va of response.vas) {
+        try {
+          const perfResponse = await vaService.getPerformance(va._id)
+          performanceData[va._id] = perfResponse.performance
+        } catch (err) {
+          console.error(`Failed to load performance for VA ${va._id}:`, err)
+        }
+      }
+      setVaPerformance(performanceData)
+    } catch (err: any) {
+      console.error('Failed to load VAs:', err)
+      setError(err.response?.data?.error || 'Failed to load virtual assistants')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Calculate stats
   const totalVAs = vas.length
   const activeVAs = vas.filter(v => v.status === 'active').length
-  const avgRating = vas.length > 0
-    ? (vas.reduce((sum, v) => sum + v.avgRating, 0) / vas.length).toFixed(1)
+  const avgRating = Object.values(vaPerformance).length > 0
+    ? (
+        Object.values(vaPerformance).reduce((sum, perf) => sum + (perf.averageRating || 0), 0) /
+        Object.values(vaPerformance).length
+      ).toFixed(1)
     : '0.0'
 
-  const handleCreateVA = (vaData: Partial<VA>) => {
-    console.log('Creating VA:', vaData)
-    const newVA: VA = {
-      id: (vas.length + 1).toString(),
-      name: vaData.name || '',
-      email: vaData.email || '',
-      department: vaData.department || '',
-      activeClients: 0,
-      hoursThisMonth: 0,
-      avgRating: 5.0,
-      status: vaData.status as 'active' | 'inactive',
-      avatar: vaData.name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'V'
+  const handleCreateVA = async (vaData: Partial<VA>) => {
+    try {
+      const createData = {
+        userId: vaData.email || '', // Will need to create user first in production
+        specialization: vaData.department ? [vaData.department] : [],
+        hourlyRate: 60, // Default rate
+        status: (vaData.status as 'active' | 'inactive' | 'on-leave') || 'active',
+      }
+
+      await vaService.create(createData)
+      showToast({ type: 'success', message: 'Virtual assistant created successfully' })
+
+      // Reload VAs list
+      await loadVAs()
+      setIsAddModalOpen(false)
+    } catch (err: any) {
+      console.error('Failed to create VA:', err)
+      showToast({ type: 'error', message: err.response?.data?.error || 'Failed to create VA' })
     }
-    setVas([newVA, ...vas])
-    showToast({ type: 'success', message: 'Virtual assistant created successfully' })
   }
 
-  const handleEditVA = (vaData: Partial<VA>) => {
+  const handleEditVA = async (vaData: Partial<VA>) => {
     if (!selectedVA) return
-    console.log('Editing VA:', selectedVA.id, vaData)
-    setVas(vas.map(v =>
-      v.id === selectedVA.id
-        ? { ...v, ...vaData }
-        : v
-    ))
-    showToast({ type: 'success', message: 'Virtual assistant updated successfully' })
-    setSelectedVA(null)
+
+    try {
+      const updateData = {
+        specialization: vaData.department ? [vaData.department] : undefined,
+        hourlyRate: 60,
+        status: vaData.status as 'active' | 'inactive' | 'on-leave',
+      }
+
+      await vaService.update(selectedVA._id, updateData)
+      showToast({ type: 'success', message: 'Virtual assistant updated successfully' })
+
+      // Reload VAs list
+      await loadVAs()
+      setIsEditModalOpen(false)
+      setSelectedVA(null)
+    } catch (err: any) {
+      console.error('Failed to update VA:', err)
+      showToast({ type: 'error', message: err.response?.data?.error || 'Failed to update VA' })
+    }
   }
 
-  const handleDeleteVA = () => {
+  const handleDeleteVA = async () => {
     if (!deleteVAId) return
-    console.log('Deleting VA:', deleteVAId)
-    setVas(vas.filter(v => v.id !== deleteVAId))
-    showToast({ type: 'success', message: 'Virtual assistant deleted successfully' })
-    setDeleteVAId(null)
+
+    try {
+      await vaService.delete(deleteVAId)
+      showToast({ type: 'success', message: 'Virtual assistant deleted successfully' })
+
+      // Reload VAs list
+      await loadVAs()
+      setDeleteVAId(null)
+    } catch (err: any) {
+      console.error('Failed to delete VA:', err)
+      showToast({ type: 'error', message: err.response?.data?.error || 'Failed to delete VA' })
+    }
   }
 
   const handleAssignClient = (clientId: string) => {
     if (!selectedVA) return
-    console.log('Assigning client', clientId, 'to VA:', selectedVA.id)
-    showToast({ type: 'success', message: 'Client assigned successfully' })
+    // This would call an API to assign client to VA
+    console.log('Assigning client', clientId, 'to VA:', selectedVA._id)
+    showToast({ type: 'info', message: 'Client assignment requires backend implementation' })
   }
 
-  const handleViewVA = (va: VA) => {
+  const handleViewVA = (va: APIVA) => {
     setSelectedVA(va)
     setIsViewModalOpen(true)
   }
 
-  const handleEditClick = (va: VA) => {
+  const handleEditClick = (va: APIVA) => {
     setSelectedVA(va)
     setIsEditModalOpen(true)
   }
 
-  const handleAssignClick = (va: VA) => {
+  const handleAssignClick = (va: APIVA) => {
     setSelectedVA(va)
     setIsAssignModalOpen(true)
   }
@@ -93,54 +161,87 @@ export const VirtualAssistants: React.FC = () => {
     setIsEditModalOpen(true)
   }
 
+  // Convert API VA to legacy VA format for modals
+  const convertToLegacyVA = (apiVA: APIVA | null): VA | undefined => {
+    if (!apiVA) return undefined
+
+    const performance = vaPerformance[apiVA._id]
+
+    return {
+      id: apiVA._id,
+      name: apiVA.userId, // Will need to fetch actual user name in production
+      email: apiVA.userId,
+      department: apiVA.specialization?.[0] || 'General',
+      activeClients: apiVA.assignedClients?.length || 0,
+      hoursThisMonth: performance?.totalHoursWorked || 0,
+      avgRating: performance?.averageRating || 5.0,
+      status: apiVA.status === 'on-leave' ? 'inactive' : apiVA.status,
+      avatar: apiVA.userId?.substring(0, 2).toUpperCase() || 'VA'
+    }
+  }
+
   const columns = [
     {
       header: 'Virtual Assistant',
-      accessor: (row: VA) => (
+      accessor: (row: APIVA) => (
         <div className="flex items-center gap-3 cursor-pointer" onClick={() => handleViewVA(row)}>
           <div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-semibold text-sm">
-            {row.avatar}
+            {row.userId?.substring(0, 2).toUpperCase() || 'VA'}
           </div>
           <div>
-            <p className="font-semibold text-black">{row.name}</p>
-            <p className="text-sm text-gray-500">{row.email}</p>
+            <p className="font-semibold text-black">{row.userId}</p>
+            <p className="text-sm text-gray-500">{row.specialization?.[0] || 'General'}</p>
           </div>
         </div>
       )
     },
     {
       header: 'Department',
-      accessor: 'department' as keyof VA,
+      accessor: (row: APIVA) => (
+        <span className="text-gray-600">{row.specialization?.[0] || 'General'}</span>
+      ),
       className: 'text-gray-600'
     },
     {
       header: 'Active Clients',
-      accessor: (row: VA) => (
-        <span className="font-semibold text-primary">{row.activeClients}</span>
+      accessor: (row: APIVA) => (
+        <span className="font-semibold text-primary">{row.assignedClients?.length || 0}</span>
       )
     },
     {
       header: 'Hours This Month',
-      accessor: (row: VA) => (
-        <span className="text-gray-600">{row.hoursThisMonth}h</span>
-      )
+      accessor: (row: APIVA) => {
+        const performance = vaPerformance[row._id]
+        return (
+          <span className="text-gray-600">
+            {performance?.totalHoursWorked?.toFixed(0) || '0'}h
+          </span>
+        )
+      }
     },
     {
       header: 'Avg Rating',
-      accessor: (row: VA) => (
-        <div className="flex items-center gap-1">
-          <Star className="w-4 h-4 text-accent fill-accent" />
-          <span className="font-semibold text-black">{row.avgRating}</span>
-        </div>
-      )
+      accessor: (row: APIVA) => {
+        const performance = vaPerformance[row._id]
+        return (
+          <div className="flex items-center gap-1">
+            <Star className="w-4 h-4 text-accent fill-accent" />
+            <span className="font-semibold text-black">
+              {performance?.averageRating?.toFixed(1) || '5.0'}
+            </span>
+          </div>
+        )
+      }
     },
     {
       header: 'Status',
-      accessor: (row: VA) => <Badge status={row.status} />
+      accessor: (row: APIVA) => (
+        <Badge status={row.status === 'on-leave' ? 'inactive' : row.status} />
+      )
     },
     {
       header: 'Actions',
-      accessor: (row: VA) => (
+      accessor: (row: APIVA) => (
         <div className="flex items-center gap-2">
           <button
             onClick={(e) => { e.stopPropagation(); handleViewVA(row) }}
@@ -164,7 +265,7 @@ export const VirtualAssistants: React.FC = () => {
             <UserPlus className="w-4 h-4 text-primary" />
           </button>
           <button
-            onClick={(e) => { e.stopPropagation(); setDeleteVAId(row.id) }}
+            onClick={(e) => { e.stopPropagation(); setDeleteVAId(row._id) }}
             className="p-2 hover:bg-background rounded-lg transition-colors"
             title="Delete"
           >
@@ -174,6 +275,14 @@ export const VirtualAssistants: React.FC = () => {
       )
     }
   ]
+
+  if (loading) {
+    return <LoadingSpinner message="Loading virtual assistants..." />
+  }
+
+  if (error) {
+    return <ErrorMessage message={error} onRetry={loadVAs} />
+  }
 
   return (
     <div className="h-screen flex flex-col overflow-hidden">
@@ -221,7 +330,14 @@ export const VirtualAssistants: React.FC = () => {
             All Virtual Assistants
           </h2>
           <div className="flex-1 overflow-y-auto">
-            <Table columns={columns} data={vas} />
+            {vas.length > 0 ? (
+              <Table columns={columns} data={vas} />
+            ) : (
+              <div className="text-center py-12">
+                <p className="text-gray-500 text-lg">No virtual assistants found</p>
+                <p className="text-gray-400 text-sm mt-2">Add a new VA to get started</p>
+              </div>
+            )}
           </div>
         </Card>
       </div>
@@ -241,7 +357,7 @@ export const VirtualAssistants: React.FC = () => {
           setSelectedVA(null)
         }}
         onSubmit={handleEditVA}
-        va={selectedVA || undefined}
+        va={convertToLegacyVA(selectedVA)}
         mode="edit"
       />
 
@@ -252,7 +368,7 @@ export const VirtualAssistants: React.FC = () => {
           setSelectedVA(null)
         }}
         onEdit={handleEditFromView}
-        va={selectedVA}
+        va={convertToLegacyVA(selectedVA) || null}
       />
 
       <AssignClientModal
@@ -262,7 +378,7 @@ export const VirtualAssistants: React.FC = () => {
           setSelectedVA(null)
         }}
         onSubmit={handleAssignClient}
-        va={selectedVA}
+        va={convertToLegacyVA(selectedVA) || null}
       />
 
       <ConfirmationModal
