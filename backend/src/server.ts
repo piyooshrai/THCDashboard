@@ -72,6 +72,11 @@ if (process.env.NODE_ENV === 'development') {
   app.use(morgan('combined'));
 }
 
+// Handle preflight OPTIONS requests explicitly
+app.options('*', (req: Request, res: Response) => {
+  res.status(204).end();
+});
+
 // Health check endpoint
 app.get('/health', (req: Request, res: Response) => {
   res.json({
