@@ -31,12 +31,27 @@ app.use(helmet());
 
 // CORS configuration
 app.use(cors({
-  origin: [
-    'http://localhost:5173',
-    'https://thc-dashboard-khaki.vercel.app',
-    'https://thc-dashboard.vercel.app',
-    'https://*.vercel.app'
-  ],
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps, curl, Postman)
+    if (!origin) {
+      return callback(null, true);
+    }
+
+    // List of allowed origins
+    const allowedOrigins = [
+      'http://localhost:5173',
+      'http://localhost:5174',
+      'https://thc-dashboard-khaki.vercel.app',
+      'https://thc-dashboard.vercel.app'
+    ];
+
+    // Check if origin is in allowed list or ends with .vercel.app
+    if (allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
+      callback(null, true);
+    } else {
+      callback(null, false);
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
