@@ -107,7 +107,9 @@ app.get('/health', (req: Request, res: Response) => {
     status: 'ok',
     message: 'Server is running',
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'production'
+    environment: process.env.NODE_ENV || 'production',
+    mongodbConfigured: !!process.env.MONGODB_URI,
+    mongodbUriPrefix: process.env.MONGODB_URI ? process.env.MONGODB_URI.substring(0, 20) + '...' : 'NOT SET'
   });
 });
 

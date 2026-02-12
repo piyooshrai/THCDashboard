@@ -12,12 +12,17 @@ export const connectDatabase = async (): Promise<void> => {
     const MONGODB_URI = process.env.MONGODB_URI;
 
     if (!MONGODB_URI) {
-      throw new Error('MONGODB_URI is not defined in environment variables');
+      const error = 'MONGODB_URI is not defined in environment variables';
+      logger.error(error);
+      throw new Error(error);
     }
+
+    logger.info('Attempting to connect to MongoDB...');
+    logger.info(`MongoDB URI format: ${MONGODB_URI.substring(0, 20)}...`);
 
     // Connect with timeout settings for serverless
     await mongoose.connect(MONGODB_URI, {
-      serverSelectionTimeoutMS: 5000, // 5 second timeout
+      serverSelectionTimeoutMS: 10000, // 10 second timeout
       socketTimeoutMS: 45000,
     });
 
@@ -33,6 +38,10 @@ export const connectDatabase = async (): Promise<void> => {
 
   } catch (error) {
     logger.error('MongoDB connection failed:', error);
+    if (error instanceof Error) {
+      logger.error('Error message:', error.message);
+      logger.error('Error stack:', error.stack);
+    }
     throw error;
   }
 };
