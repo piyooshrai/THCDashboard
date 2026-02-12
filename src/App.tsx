@@ -59,7 +59,7 @@ function App() {
             <Route
               path="/clients"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute allowedRoles={['admin']}>
                   <Layout>
                     <Clients />
                   </Layout>
@@ -69,7 +69,7 @@ function App() {
             <Route
               path="/virtual-assistants"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute allowedRoles={['admin']}>
                   <Layout>
                     <VirtualAssistants />
                   </Layout>
@@ -79,7 +79,7 @@ function App() {
             <Route
               path="/reports"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute allowedRoles={['admin', 'client']}>
                   <Layout>
                     <Reports />
                   </Layout>
@@ -89,7 +89,7 @@ function App() {
             <Route
               path="/invoices"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute allowedRoles={['admin', 'client']}>
                   <Layout>
                     <Invoices />
                   </Layout>
@@ -109,7 +109,7 @@ function App() {
             <Route
               path="/analytics"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute allowedRoles={['admin']}>
                   <Layout>
                     <Analytics />
                   </Layout>
