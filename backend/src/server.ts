@@ -72,6 +72,33 @@ if (process.env.NODE_ENV === 'development') {
   app.use(morgan('combined'));
 }
 
+// Lazy database connection for serverless
+let isDbConnected = false;
+const ensureDbConnection = async () => {
+  if (!isDbConnected && process.env.VERCEL === '1') {
+    try {
+      await connectDatabase();
+      isDbConnected = true;
+      logger.info('✅ Database connected in serverless environment');
+    } catch (error) {
+      logger.error('❌ Database connection failed:', error);
+      throw error;
+    }
+  }
+};
+
+// Middleware to ensure database connection on each request (serverless)
+if (process.env.VERCEL === '1') {
+  app.use(async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      await ensureDbConnection();
+      next();
+    } catch (error) {
+      res.status(503).json({ error: 'Database connection failed' });
+    }
+  });
+}
+
 // Handle preflight OPTIONS requests explicitly
 app.options('*', (req: Request, res: Response) => {
   res.status(204).end();
@@ -157,32 +184,8 @@ process.on('SIGTERM', () => {
   process.exit(0);
 });
 
-// Lazy database connection for serverless
-let isDbConnected = false;
-const ensureDbConnection = async () => {
-  if (!isDbConnected && process.env.VERCEL === '1') {
-    try {
-      await connectDatabase();
-      isDbConnected = true;
-      logger.info('✅ Database connected in serverless environment');
-    } catch (error) {
-      logger.error('❌ Database connection failed:', error);
-      throw error;
-    }
-  }
-};
-
-// Middleware to ensure database connection on each request (serverless)
-if (process.env.VERCEL === '1') {
-  app.use(async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      await ensureDbConnection();
-      next();
-    } catch (error) {
-      res.status(503).json({ error: 'Database connection failed' });
-    }
-  });
-} else {
+// Initialize based on environment
+if (process.env.VERCEL !== '1') {
   // Local development: start full server with database
   startServer();
 }
