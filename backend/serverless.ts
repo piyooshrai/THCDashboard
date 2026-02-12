@@ -68,7 +68,40 @@ app.use(morgan('combined', {
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Health check endpoint
+// Database connection promise for serverless reuse
+let dbConnectionPromise: Promise<void> | null = null;
+
+const ensureDbConnection = async () => {
+  if (!dbConnectionPromise) {
+    dbConnectionPromise = connectDatabase()
+      .then(() => {
+        logger.info('✅ Database connected for serverless function');
+      })
+      .catch((error) => {
+        logger.error('❌ Database connection failed:', error);
+        dbConnectionPromise = null; // Reset on failure
+        throw error;
+      });
+  }
+  return dbConnectionPromise;
+};
+
+// Middleware to ensure DB connection before processing API requests
+app.use('/api', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    await ensureDbConnection();
+    next();
+  } catch (error) {
+    logger.error('Database connection error:', error);
+    res.status(503).json({
+      error: 'Service Unavailable',
+      message: 'Database connection failed',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Health check endpoint (doesn't need DB)
 app.get('/health', (req: Request, res: Response) => {
   res.json({
     status: 'ok',
@@ -111,23 +144,5 @@ app.use((req: Request, res: Response) => {
     timestamp: new Date().toISOString()
   });
 });
-
-// Connect to database on cold start
-let dbConnected = false;
-
-const ensureDbConnection = async () => {
-  if (!dbConnected) {
-    try {
-      await connectDatabase();
-      dbConnected = true;
-      logger.info('✅ Database connected for serverless function');
-    } catch (error) {
-      logger.error('❌ Database connection failed:', error);
-    }
-  }
-};
-
-// Initialize database connection
-ensureDbConnection();
 
 export default app;
