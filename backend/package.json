@@ -7,7 +7,7 @@
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "vercel-build": "rm -rf api/index.ts && ncc build serverless.ts -o api",
+    "vercel-build": "ncc build serverless.ts -o .ncc-output && mv .ncc-output/index.js api/index.js && rm -rf .ncc-output",
     "test": "jest --coverage",
     "test:watch": "jest --watch",
     "check": "ts-node scripts/check-setup.ts",
