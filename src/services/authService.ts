@@ -1,4 +1,5 @@
 import api from './api';
+import { mockAuthService, isDemoMode } from './mockAuthService';
 
 export interface RegisterData {
   firstName: string;
@@ -35,7 +36,8 @@ export interface UserProfile {
   updatedAt?: string;
 }
 
-export const authService = {
+// Real API-based auth service
+const realAuthService = {
   /**
    * Register a new user
    */
@@ -115,5 +117,30 @@ export const authService = {
    */
   isAuthenticated(): boolean {
     return !!localStorage.getItem('accessToken');
+  },
+};
+
+// Export the appropriate service based on demo mode
+export const authService = {
+  register: (data: RegisterData) => {
+    return isDemoMode() ? mockAuthService.register(data) : realAuthService.register(data);
+  },
+  login: (email: string, password: string) => {
+    return isDemoMode() ? mockAuthService.login(email, password) : realAuthService.login(email, password);
+  },
+  logout: () => {
+    return isDemoMode() ? mockAuthService.logout() : realAuthService.logout();
+  },
+  getCurrentUser: () => {
+    return isDemoMode() ? mockAuthService.getCurrentUser() : realAuthService.getCurrentUser();
+  },
+  refreshToken: (refreshToken: string) => {
+    return isDemoMode() ? mockAuthService.refreshToken(refreshToken) : realAuthService.refreshToken(refreshToken);
+  },
+  getCurrentUserFromStorage: () => {
+    return isDemoMode() ? mockAuthService.getCurrentUserFromStorage() : realAuthService.getCurrentUserFromStorage();
+  },
+  isAuthenticated: () => {
+    return isDemoMode() ? mockAuthService.isAuthenticated() : realAuthService.isAuthenticated();
   },
 };
