@@ -47,11 +47,13 @@ export const Invoices: React.FC = () => {
         invoiceService.getStats()
       ])
 
-      setInvoices(invoiceRes.invoices)
-      setStats(statsRes.stats)
+      setInvoices(invoiceRes.invoices || [])
+      setStats(statsRes.stats || null)
     } catch (err: any) {
       console.error('Failed to load invoices:', err)
       setError(err.response?.data?.error || 'Failed to load invoices')
+      setInvoices([]) // Set to empty array on error
+      setStats(null)
     } finally {
       setLoading(false)
     }

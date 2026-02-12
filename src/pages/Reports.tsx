@@ -36,16 +36,17 @@ export const Reports: React.FC = () => {
       setError('')
 
       const response = await reportService.getAll()
-      setReports(response.reports)
+      setReports(response.reports || [])
     } catch (err: any) {
       console.error('Failed to load reports:', err)
       setError(err.response?.data?.error || 'Failed to load reports')
+      setReports([]) // Set to empty array on error
     } finally {
       setLoading(false)
     }
   }
 
-  const filteredReports = reports.filter((report) => {
+  const filteredReports = (reports || []).filter((report) => {
     return report.reportType === activeTab
   })
 

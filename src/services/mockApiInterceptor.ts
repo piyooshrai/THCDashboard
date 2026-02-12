@@ -72,20 +72,97 @@ const generateMockTimeLogs = () => [
 
 const generateMockInvoices = () => [
   {
-    id: 'inv-1',
+    _id: 'inv-1',
+    invoiceNumber: 'INV-001',
     clientId: 'client-1',
+    vaId: 'va-1',
     amount: 2000,
+    currency: 'USD',
     status: 'paid',
     dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+    issueDate: new Date().toISOString(),
     createdAt: new Date().toISOString(),
+    lineItems: [{
+      description: 'VA Services',
+      quantity: 1,
+      rate: 2000,
+      amount: 2000
+    }]
   },
   {
-    id: 'inv-2',
+    _id: 'inv-2',
+    invoiceNumber: 'INV-002',
     clientId: 'client-2',
+    vaId: 'va-2',
     amount: 1500,
+    currency: 'USD',
     status: 'pending',
     dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+    issueDate: new Date().toISOString(),
     createdAt: new Date().toISOString(),
+    lineItems: [{
+      description: 'VA Services',
+      quantity: 1,
+      rate: 1500,
+      amount: 1500
+    }]
+  },
+  {
+    _id: 'inv-3',
+    invoiceNumber: 'INV-003',
+    clientId: 'client-1',
+    vaId: 'va-1',
+    amount: 3000,
+    currency: 'USD',
+    status: 'overdue',
+    dueDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+    issueDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+    createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+    lineItems: [{
+      description: 'VA Services',
+      quantity: 1,
+      rate: 3000,
+      amount: 3000
+    }]
+  },
+];
+
+const generateMockReports = () => [
+  {
+    _id: 'report-1',
+    reportType: 'weekly',
+    clientId: 'client-1',
+    vaId: 'va-1',
+    startDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+    endDate: new Date().toISOString(),
+    status: 'generated',
+    s3Key: 'reports/weekly-report-1.pdf',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    _id: 'report-2',
+    reportType: 'monthly',
+    clientId: 'client-2',
+    vaId: 'va-2',
+    startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+    endDate: new Date().toISOString(),
+    status: 'generated',
+    s3Key: 'reports/monthly-report-2.pdf',
+    createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+    updatedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    _id: 'report-3',
+    reportType: 'custom',
+    clientId: 'client-1',
+    vaId: 'va-1',
+    startDate: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(),
+    endDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+    status: 'generated',
+    s3Key: 'reports/custom-report-3.pdf',
+    createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+    updatedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
   },
 ];
 
@@ -161,10 +238,36 @@ export const setupMockApiInterceptor = (apiInstance: AxiosInstance) => {
 
       // Invoices endpoints
       if (url.includes('/invoices')) {
-        if (method === 'GET') {
-          mockResponse = { invoices: generateMockInvoices() };
+        if (url.includes('/stats')) {
+          mockResponse = {
+            stats: {
+              totalRevenue: 6500,
+              totalPaid: 2000,
+              totalPending: 1500,
+              totalOverdue: 3000,
+            }
+          };
+        } else if (method === 'GET') {
+          mockResponse = {
+            success: true,
+            invoices: generateMockInvoices(),
+            pagination: {
+              total: 3,
+              page: 1,
+              pages: 1,
+              limit: 10
+            }
+          };
         } else if (method === 'POST') {
-          mockResponse = { invoice: { id: 'new-invoice', ...config.data } };
+          if (url.includes('/mark-paid')) {
+            mockResponse = { success: true, invoice: { ...config.data, status: 'paid' } };
+          } else {
+            mockResponse = { success: true, invoice: { _id: 'new-invoice', ...config.data } };
+          }
+        } else if (method === 'PUT') {
+          mockResponse = { success: true, invoice: { _id: 'updated-invoice', ...config.data } };
+        } else if (method === 'DELETE') {
+          mockResponse = { success: true, message: 'Invoice deleted successfully' };
         }
       }
 
@@ -187,13 +290,41 @@ export const setupMockApiInterceptor = (apiInstance: AxiosInstance) => {
 
       // Reports endpoints
       if (url.includes('/reports')) {
-        mockResponse = {
-          report: {
-            totalHours: 14,
-            totalRevenue: 3500,
-            timeLogs: generateMockTimeLogs(),
-          }
-        };
+        if (url.includes('/download')) {
+          mockResponse = {
+            success: true,
+            url: 'https://example.com/report.pdf',
+            expiresIn: 3600
+          };
+        } else if (method === 'GET' && !url.match(/\/reports\/[^\/]+$/)) {
+          // GET /reports (list)
+          mockResponse = {
+            success: true,
+            reports: generateMockReports(),
+            pagination: {
+              total: 3,
+              page: 1,
+              pages: 1,
+              limit: 10
+            }
+          };
+        } else if (method === 'GET') {
+          // GET /reports/:id (single report)
+          mockResponse = {
+            success: true,
+            report: generateMockReports()[0]
+          };
+        } else if (method === 'POST') {
+          mockResponse = {
+            success: true,
+            report: { _id: 'new-report', ...config.data }
+          };
+        } else if (method === 'DELETE') {
+          mockResponse = {
+            success: true,
+            message: 'Report deleted successfully'
+          };
+        }
       }
 
       // Documents endpoints
