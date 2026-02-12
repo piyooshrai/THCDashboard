@@ -1,5 +1,5 @@
 import React from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard,
   Users,
@@ -10,8 +10,10 @@ import {
   FolderOpen,
   BarChart3,
   Settings,
-  Bell
+  Bell,
+  LogOut
 } from 'lucide-react'
+import { useAuth } from '../../contexts/AuthContext'
 
 interface NavItem {
   label: string
@@ -35,6 +37,13 @@ const navItems: NavItem[] = [
 
 export const Sidebar: React.FC = () => {
   const location = useLocation()
+  const navigate = useNavigate()
+  const { logout, user } = useAuth()
+
+  const handleLogout = async () => {
+    await logout()
+    navigate('/login')
+  }
 
   const renderNavItems = () => {
     let currentSection = ''
@@ -88,16 +97,23 @@ export const Sidebar: React.FC = () => {
         {renderNavItems()}
       </nav>
 
-      <div className="p-6 border-t border-gray-200">
+      <div className="p-6 border-t border-gray-200 space-y-3">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-accent flex items-center justify-center text-white font-semibold">
-            PA
+            {user?.firstName?.[0]}{user?.lastName?.[0]}
           </div>
           <div className="flex-1">
-            <p className="font-semibold text-black text-sm">Piyoosh Admin</p>
-            <p className="text-xs text-gray-500">Super Admin</p>
+            <p className="font-semibold text-black text-sm">{user?.firstName} {user?.lastName}</p>
+            <p className="text-xs text-gray-500 capitalize">{user?.role}</p>
           </div>
         </div>
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+        >
+          <LogOut className="w-4 h-4" />
+          <span>Logout</span>
+        </button>
       </div>
     </div>
   )
