@@ -140,7 +140,7 @@ export const Login: React.FC = () => {
                 disabled={loading}
               >
                 <div className="flex items-center justify-between">
-                  <span className="font-medium">👤 Admin Account</span>
+                  <span className="font-medium">Admin Account</span>
                   <span className="text-xs text-gray-500">Click to fill</span>
                 </div>
                 <div className="text-xs text-gray-500 mt-1 font-mono">
@@ -155,7 +155,7 @@ export const Login: React.FC = () => {
                 disabled={loading}
               >
                 <div className="flex items-center justify-between">
-                  <span className="font-medium">💼 Client Account</span>
+                  <span className="font-medium">Client Account</span>
                   <span className="text-xs text-gray-500">Click to fill</span>
                 </div>
                 <div className="text-xs text-gray-500 mt-1 font-mono">
@@ -170,7 +170,7 @@ export const Login: React.FC = () => {
                 disabled={loading}
               >
                 <div className="flex items-center justify-between">
-                  <span className="font-medium">🎯 VA Account</span>
+                  <span className="font-medium">VA Account</span>
                   <span className="text-xs text-gray-500">Click to fill</span>
                 </div>
                 <div className="text-xs text-gray-500 mt-1 font-mono">
