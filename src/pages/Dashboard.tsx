@@ -11,6 +11,8 @@ import { ErrorMessage } from '../components/ErrorMessage'
 import { UserFormModal } from '../components/modals/UserFormModal'
 import { UploadDocumentModal } from '../components/modals/UploadDocumentModal'
 import { ConfirmationModal } from '../components/modals/ConfirmationModal'
+import { ClientDashboard } from '../components/dashboards/ClientDashboard'
+import { VADashboard } from '../components/dashboards/VADashboard'
 import {
   Users,
   Building2,
@@ -32,6 +34,17 @@ import type { User } from '../types'
 export const Dashboard: React.FC = () => {
   const { showToast } = useToast()
   const { user: currentUser } = useAuth()
+
+  // Route to role-specific dashboards
+  if (currentUser?.role === 'client') {
+    return <ClientDashboard />
+  }
+
+  if (currentUser?.role === 'va') {
+    return <VADashboard />
+  }
+
+  // Admin dashboard continues below
 
   // State
   const [loading, setLoading] = useState(true)

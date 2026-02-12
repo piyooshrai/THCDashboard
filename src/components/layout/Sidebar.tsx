@@ -20,17 +20,21 @@ interface NavItem {
   path: string
   icon: React.ElementType
   section?: string
+  roles?: string[] // If not specified, available to all roles
 }
 
 const navItems: NavItem[] = [
   { label: 'Dashboard', path: '/', icon: LayoutDashboard, section: 'MAIN' },
-  { label: 'Users', path: '/users', icon: Users },
-  { label: 'Clients', path: '/clients', icon: Building2 },
-  { label: 'Virtual Assistants', path: '/virtual-assistants', icon: UserCheck },
+  { label: 'Users', path: '/users', icon: Users, roles: ['admin'] },
+  { label: 'Clients', path: '/clients', icon: Building2, roles: ['admin'] },
+  { label: 'Virtual Assistants', path: '/virtual-assistants', icon: UserCheck, roles: ['admin'] },
+  { label: 'My Clients', path: '/my-clients', icon: Building2, roles: ['va'], section: 'MY WORK' },
+  { label: 'Time Tracking', path: '/time-tracking', icon: BarChart3, roles: ['va'] },
+  { label: 'My VA', path: '/my-va', icon: UserCheck, roles: ['client'], section: 'MY ACCOUNT' },
   { label: 'Reports', path: '/reports', icon: FileText, section: 'MANAGEMENT' },
   { label: 'Invoices', path: '/invoices', icon: Receipt },
   { label: 'Documents', path: '/documents', icon: FolderOpen },
-  { label: 'Analytics', path: '/analytics', icon: BarChart3 },
+  { label: 'Analytics', path: '/analytics', icon: BarChart3, roles: ['admin'] },
   { label: 'Settings', path: '/settings', icon: Settings, section: 'SYSTEM' },
   { label: 'Notifications', path: '/notifications', icon: Bell }
 ]
@@ -47,8 +51,17 @@ export const Sidebar: React.FC = () => {
 
   const renderNavItems = () => {
     let currentSection = ''
+    const userRole = user?.role || 'client'
 
-    return navItems.map((item) => {
+    // Filter nav items based on user role
+    const filteredItems = navItems.filter(item => {
+      // If no roles specified, show to everyone
+      if (!item.roles) return true
+      // Otherwise, check if user's role is in the allowed roles
+      return item.roles.includes(userRole)
+    })
+
+    return filteredItems.map((item) => {
       const isActive = location.pathname === item.path
       const Icon = item.icon
       const showSection = item.section && item.section !== currentSection
