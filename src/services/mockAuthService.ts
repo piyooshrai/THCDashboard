@@ -139,7 +139,7 @@ export const mockAuthService = {
   /**
    * Mock refresh token
    */
-  async refreshToken(refreshToken: string): Promise<{ accessToken: string }> {
+  async refreshToken(_refreshToken: string): Promise<{ accessToken: string }> {
     const userStr = localStorage.getItem('user');
     if (!userStr) {
       throw new Error('Not authenticated');
