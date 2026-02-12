@@ -40,13 +40,18 @@ export const Analytics: React.FC = () => {
         clientService.getAll()
       ])
 
-      setDashboardStats(dashboardRes.stats)
-      setRevenueData(revenueRes.data)
-      setTopVAs(topVAsRes.data)
-      setClients(clientsRes.clients)
+      setDashboardStats(dashboardRes.stats || {})
+      setRevenueData(revenueRes.data || [])
+      setTopVAs(topVAsRes.data || [])
+      setClients(clientsRes.clients || [])
     } catch (err: any) {
       console.error('Failed to load analytics:', err)
       setError(err.response?.data?.error || 'Failed to load analytics')
+      // Set defaults on error
+      setDashboardStats({})
+      setRevenueData([])
+      setTopVAs([])
+      setClients([])
     } finally {
       setLoading(false)
     }
@@ -65,14 +70,14 @@ export const Analytics: React.FC = () => {
   const netSavings = totalValueReclaimed - totalVACost
 
   // Prepare chart data for revenue trend
-  const revenueTrendData = revenueData.map(item => ({
+  const revenueTrendData = (revenueData || []).map(item => ({
     month: item._id,
     revenue: item.totalRevenue,
     roi: ((item.totalRevenue / (totalVACost / 6)) * 100).toFixed(0) // Simple ROI calculation
   }))
 
   // Prepare top clients data
-  const topClientsData = clients.slice(0, 5).map(client => ({
+  const topClientsData = (clients || []).slice(0, 5).map(client => ({
     client: client.companyName || client.userId?.substring(0, 8) || 'Unknown',
     hours: Math.floor(Math.random() * 500) + 100, // Would need to fetch from time logs
     roi: Math.floor(Math.random() * 200) + 150 // Would need actual calculation
