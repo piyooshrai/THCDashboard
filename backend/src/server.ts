@@ -157,11 +157,30 @@ process.on('SIGTERM', () => {
   process.exit(0);
 });
 
-// Initialize based on environment
+// Lazy database connection for serverless
+let isDbConnected = false;
+const ensureDbConnection = async () => {
+  if (!isDbConnected && process.env.VERCEL === '1') {
+    try {
+      await connectDatabase();
+      isDbConnected = true;
+      logger.info('✅ Database connected in serverless environment');
+    } catch (error) {
+      logger.error('❌ Database connection failed:', error);
+      throw error;
+    }
+  }
+};
+
+// Middleware to ensure database connection on each request (serverless)
 if (process.env.VERCEL === '1') {
-  // Serverless environment: only initialize database
-  initializeDatabase().catch((error) => {
-    logger.error('❌ Failed to initialize database in serverless environment:', error);
+  app.use(async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      await ensureDbConnection();
+      next();
+    } catch (error) {
+      res.status(503).json({ error: 'Database connection failed' });
+    }
   });
 } else {
   // Local development: start full server with database

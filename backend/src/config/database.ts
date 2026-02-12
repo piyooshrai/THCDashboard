@@ -3,13 +3,23 @@ import logger from '../utils/logger';
 
 export const connectDatabase = async (): Promise<void> => {
   try {
+    // Check if already connected (important for serverless reuse)
+    if (mongoose.connection.readyState === 1) {
+      logger.info('MongoDB already connected, reusing connection');
+      return;
+    }
+
     const MONGODB_URI = process.env.MONGODB_URI;
 
     if (!MONGODB_URI) {
       throw new Error('MONGODB_URI is not defined in environment variables');
     }
 
-    await mongoose.connect(MONGODB_URI);
+    // Connect with timeout settings for serverless
+    await mongoose.connect(MONGODB_URI, {
+      serverSelectionTimeoutMS: 5000, // 5 second timeout
+      socketTimeoutMS: 45000,
+    });
 
     logger.info('MongoDB connected successfully');
 
