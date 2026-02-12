@@ -78,18 +78,18 @@ app.get('/health', (req: Request, res: Response) => {
   });
 });
 
-// API Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/clients', clientRoutes);
-app.use('/api/vas', vaRoutes);
-app.use('/api/time-logs', timeLogRoutes);
-app.use('/api/invoices', invoiceRoutes);
-app.use('/api/reports', reportRoutes);
-app.use('/api/documents', documentRoutes);
-app.use('/api/feedback', feedbackRoutes);
-app.use('/api/notifications', notificationRoutes);
-app.use('/api/analytics', analyticsRoutes);
+// API Routes with v1 prefix to match frontend
+app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/users', userRoutes);
+app.use('/api/v1/clients', clientRoutes);
+app.use('/api/v1/vas', vaRoutes);
+app.use('/api/v1/time-logs', timeLogRoutes);
+app.use('/api/v1/invoices', invoiceRoutes);
+app.use('/api/v1/reports', reportRoutes);
+app.use('/api/v1/documents', documentRoutes);
+app.use('/api/v1/feedback', feedbackRoutes);
+app.use('/api/v1/notifications', notificationRoutes);
+app.use('/api/v1/analytics', analyticsRoutes);
 
 // Root endpoint
 app.get('/', (req: Request, res: Response) => {
