@@ -30,24 +30,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowe
 
   // Check role-based access if roles are specified
   if (allowedRoles && user && !allowedRoles.includes(user.role)) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-[#f8f6f3]">
-        <div className="bg-white p-8 rounded-[20px] shadow-lg max-w-md">
-          <h2 className="font-['Playfair_Display'] text-2xl font-bold text-[#0F2052] mb-4">
-            Access Denied
-          </h2>
-          <p className="text-gray-600 mb-6">
-            You don't have permission to access this page.
-          </p>
-          <button
-            onClick={() => window.history.back()}
-            className="w-full h-[48px] bg-[#0F2052] text-white rounded-[12px] font-semibold hover:bg-[#1a2b5c] transition-all"
-          >
-            Go Back
-          </button>
-        </div>
-      </div>
-    );
+    // Redirect to dashboard instead of showing "Go Back" button
+    return <Navigate to="/" replace />;
   }
 
   return <>{children}</>;

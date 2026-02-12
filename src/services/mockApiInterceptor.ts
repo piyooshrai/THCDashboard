@@ -195,7 +195,19 @@ export const setupMockApiInterceptor = (apiInstance: AxiosInstance) => {
 
       // Clients endpoints
       if (url.includes('/clients')) {
-        if (method === 'GET' && !url.match(/\/clients\/[^/]+$/)) {
+        if (url.includes('/roi')) {
+          // GET /clients/:id/roi
+          mockResponse = {
+            success: true,
+            roi: {
+              roiPercentage: 245,
+              totalValueReclaimed: 12500,
+              totalVACost: 3500,
+              netSavings: 9000,
+              period: 'monthly'
+            }
+          };
+        } else if (method === 'GET' && !url.match(/\/clients\/[^/]+$/)) {
           mockResponse = { clients: generateMockClients() };
         } else if (method === 'GET') {
           mockResponse = { client: generateMockClients()[0] };
@@ -210,7 +222,22 @@ export const setupMockApiInterceptor = (apiInstance: AxiosInstance) => {
 
       // VAs endpoints
       if (url.includes('/vas')) {
-        if (method === 'GET' && !url.match(/\/vas\/[^/]+$/)) {
+        if (url.includes('/performance')) {
+          // GET /vas/:id/performance
+          mockResponse = {
+            success: true,
+            performance: {
+              averageRating: 4.5,
+              totalTasksCompleted: 142,
+              totalHours: 320,
+              clientSatisfactionScore: 4.7,
+              onTimeDeliveryRate: 95
+            }
+          };
+        } else if (url.includes('/assign')) {
+          // POST /vas/:id/assign
+          mockResponse = { success: true, message: 'Client assigned successfully' };
+        } else if (method === 'GET' && !url.match(/\/vas\/[^/]+$/)) {
           mockResponse = { vas: generateMockVAs() };
         } else if (method === 'GET') {
           mockResponse = { va: generateMockVAs()[0] };
@@ -273,7 +300,33 @@ export const setupMockApiInterceptor = (apiInstance: AxiosInstance) => {
 
       // Analytics endpoints
       if (url.includes('/analytics')) {
-        mockResponse = generateMockAnalytics();
+        if (url.includes('/revenue-by-month')) {
+          // GET /analytics/revenue-by-month
+          const months = parseInt(url.split('months=')[1]) || 6;
+          mockResponse = {
+            success: true,
+            data: Array.from({ length: months }, (_, i) => ({
+              _id: new Date(Date.now() - (months - i - 1) * 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'short' }),
+              totalRevenue: Math.floor(Math.random() * 5000) + 3000,
+              totalHours: Math.floor(Math.random() * 200) + 100
+            }))
+          };
+        } else if (url.includes('/top-vas')) {
+          // GET /analytics/top-vas
+          mockResponse = {
+            success: true,
+            data: [
+              { vaId: 'va-1', name: 'Maria Garcia', totalHours: 320, rating: 4.8 },
+              { vaId: 'va-2', name: 'Carlos Rodriguez', totalHours: 280, rating: 4.6 },
+              { vaId: 'va-3', name: 'Ana Silva', totalHours: 250, rating: 4.7 },
+            ]
+          };
+        } else if (url.includes('/dashboard')) {
+          // GET /analytics/dashboard
+          mockResponse = { stats: generateMockAnalytics() };
+        } else {
+          mockResponse = generateMockAnalytics();
+        }
       }
 
       // Users endpoints
