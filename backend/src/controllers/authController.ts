@@ -80,9 +80,10 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     const refreshToken = generateRefreshToken(user._id.toString());
 
     res.status(201).json({
+      success: true,
       message: 'User registered successfully',
       user: sanitizeUser(user),
-      token,
+      accessToken: token,
       refreshToken
     });
   } catch (error: any) {
@@ -120,9 +121,10 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     const refreshToken = generateRefreshToken(user._id.toString());
 
     res.json({
+      success: true,
       message: 'Login successful',
       user: sanitizeUser(user),
-      token,
+      accessToken: token,
       refreshToken
     });
   } catch (error: any) {
@@ -155,7 +157,8 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
     const newRefreshToken = generateRefreshToken(user._id.toString());
 
     res.json({
-      token: newToken,
+      success: true,
+      accessToken: newToken,
       refreshToken: newRefreshToken
     });
   } catch (error: any) {
