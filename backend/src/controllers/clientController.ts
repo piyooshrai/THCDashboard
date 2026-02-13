@@ -26,7 +26,8 @@ export const getAllClients = async (req: AuthRequest, res: Response): Promise<vo
     const total = await Client.countDocuments(filter);
 
     res.json({
-      data: clients,
+      success: true,
+      clients: clients,
       pagination: {
         page,
         limit,
