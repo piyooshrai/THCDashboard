@@ -24,7 +24,8 @@ export const getAllDocuments = async (req: AuthRequest, res: Response): Promise<
     const total = await Document.countDocuments(filter);
 
     res.json({
-      data: documents,
+      success: true,
+      documents: documents,
       pagination: {
         page,
         limit,

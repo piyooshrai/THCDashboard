@@ -36,13 +36,33 @@ export const getDashboardAnalytics = async (req: AuthRequest, res: Response): Pr
     const allTimeLogs = await TimeLog.find();
     const totalHoursWorked = allTimeLogs.reduce((sum, log) => sum + log.hoursWorked, 0);
 
+    // Get recent activity (last 10 time logs)
+    const recentLogs = await TimeLog.find()
+      .sort({ date: -1 })
+      .limit(10)
+      .populate('vaId', 'name')
+      .populate('clientId', 'name');
+
+    const recentActivity = recentLogs.map(log => ({
+      type: 'CheckCircle',
+      description: `${(log.vaId as any)?.name || 'VA'} logged ${log.hoursWorked}h for ${(log.clientId as any)?.name || 'Client'}`,
+      timestamp: log.date.toISOString()
+    }));
+
+    // Pending invoices
+    const pendingInvoices = await Invoice.countDocuments({ status: 'unpaid' });
+
     res.json({
-      totalClients,
-      totalVAs,
-      totalRevenue: Math.round(totalRevenue * 100) / 100,
-      activeProjects,
-      avgClientSatisfaction: Math.round(avgClientSatisfaction * 100) / 100,
-      totalHoursWorked: Math.round(totalHoursWorked * 100) / 100
+      success: true,
+      stats: {
+        totalClients,
+        activeVAs: totalVAs,
+        totalRevenue: Math.round(totalRevenue * 100) / 100,
+        avgClientROI: Math.round(avgClientSatisfaction * 100) / 100,
+        totalHoursLogged: Math.round(totalHoursWorked * 100) / 100,
+        pendingInvoices,
+        recentActivity
+      }
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message });

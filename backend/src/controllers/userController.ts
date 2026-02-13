@@ -21,7 +21,8 @@ export const getAllUsers = async (req: AuthRequest, res: Response): Promise<void
     const total = await User.countDocuments(filter);
 
     res.json({
-      data: users.map(sanitizeUser),
+      success: true,
+      users: users.map(sanitizeUser),
       pagination: {
         page,
         limit,
