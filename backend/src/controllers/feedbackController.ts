@@ -24,7 +24,8 @@ export const getAllFeedback = async (req: AuthRequest, res: Response): Promise<v
     const total = await Feedback.countDocuments(filter);
 
     res.json({
-      data: feedbacks,
+      success: true,
+      feedbacks: feedbacks,
       pagination: {
         page,
         limit,
@@ -109,7 +110,7 @@ export const deleteFeedback = async (req: AuthRequest, res: Response): Promise<v
       return;
     }
 
-    res.json({ message: 'Feedback deleted successfully' });
+    res.json({ success: true, message: 'Feedback deleted successfully' });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
