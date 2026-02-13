@@ -28,7 +28,8 @@ export const getAllTimeLogs = async (req: AuthRequest, res: Response): Promise<v
     const total = await TimeLog.countDocuments(filter);
 
     res.json({
-      data: timeLogs,
+      success: true,
+      timeLogs: timeLogs,
       pagination: {
         page,
         limit,
@@ -110,7 +111,7 @@ export const deleteTimeLog = async (req: AuthRequest, res: Response): Promise<vo
       return;
     }
 
-    res.json({ message: 'Time log deleted successfully' });
+    res.json({ success: true, message: 'Time log deleted successfully' });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }

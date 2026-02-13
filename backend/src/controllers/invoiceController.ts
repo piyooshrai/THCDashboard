@@ -28,7 +28,8 @@ export const getAllInvoices = async (req: AuthRequest, res: Response): Promise<v
     const total = await Invoice.countDocuments(filter);
 
     res.json({
-      data: invoices,
+      success: true,
+      invoices: invoices,
       pagination: {
         page,
         limit,
@@ -110,7 +111,7 @@ export const deleteInvoice = async (req: AuthRequest, res: Response): Promise<vo
       return;
     }
 
-    res.json({ message: 'Invoice deleted successfully' });
+    res.json({ success: true, message: 'Invoice deleted successfully' });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }

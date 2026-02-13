@@ -117,7 +117,7 @@ export const deleteDocument = async (req: AuthRequest, res: Response): Promise<v
     // Delete from database
     await Document.findByIdAndDelete(req.params.id);
 
-    res.json({ message: 'Document deleted successfully' });
+    res.json({ success: true, message: 'Document deleted successfully' });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }

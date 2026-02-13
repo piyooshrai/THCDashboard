@@ -26,7 +26,8 @@ export const getAllReports = async (req: AuthRequest, res: Response): Promise<vo
     const total = await Report.countDocuments(filter);
 
     res.json({
-      data: reports,
+      success: true,
+      reports: reports,
       pagination: {
         page,
         limit,
@@ -132,7 +133,7 @@ export const deleteReport = async (req: AuthRequest, res: Response): Promise<voi
       return;
     }
 
-    res.json({ message: 'Report deleted successfully' });
+    res.json({ success: true, message: 'Report deleted successfully' });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
