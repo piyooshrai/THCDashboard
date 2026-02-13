@@ -25,7 +25,8 @@ export const getAllVAs = async (req: AuthRequest, res: Response): Promise<void> 
     const total = await VA.countDocuments(filter);
 
     res.json({
-      data: vas,
+      success: true,
+      vas: vas,
       pagination: {
         page,
         limit,
@@ -50,7 +51,7 @@ export const getVAById = async (req: AuthRequest, res: Response): Promise<void> 
       return;
     }
 
-    res.json(va);
+    res.json({ success: true, va });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
@@ -81,6 +82,7 @@ export const createVA = async (req: AuthRequest, res: Response): Promise<void> =
       .populate('managerId', 'email');
 
     res.status(201).json({
+      success: true,
       message: 'VA created successfully',
       va: populatedVA
     });
@@ -104,6 +106,7 @@ export const updateVA = async (req: AuthRequest, res: Response): Promise<void> =
     }
 
     res.json({
+      success: true,
       message: 'VA updated successfully',
       va
     });
@@ -126,7 +129,7 @@ export const deleteVA = async (req: AuthRequest, res: Response): Promise<void> =
     await User.findByIdAndDelete(va.userId);
     await VA.findByIdAndDelete(req.params.id);
 
-    res.json({ message: 'VA deleted successfully' });
+    res.json({ success: true, message: 'VA deleted successfully' });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
@@ -157,13 +160,13 @@ export const getVAPerformance = async (req: AuthRequest, res: Response): Promise
     const uniqueClients = new Set(timeLogs.map(log => log.clientId.toString()));
 
     res.json({
-      va,
+      success: true,
       performance: {
-        totalHours: Math.round(totalHours * 100) / 100,
-        totalTasks,
-        totalClients: uniqueClients.size,
+        totalHoursWorked: Math.round(totalHours * 100) / 100,
         averageRating: Math.round(avgRating * 100) / 100,
-        totalFeedback: feedbacks.length
+        tasksCompleted: totalTasks,
+        clientSatisfaction: Math.round(avgRating * 100) / 100, // Using average rating as satisfaction
+        revenueGenerated: Math.round(totalHours * va.hourlyRate * 100) / 100
       }
     });
   } catch (error: any) {
