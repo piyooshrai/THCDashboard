@@ -53,13 +53,6 @@ export const Settings: React.FC = () => {
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false)
   const [isDeleteAccountOpen, setIsDeleteAccountOpen] = useState(false)
 
-  const handleToggle = (key: keyof SettingsState) => {
-    setSettings({
-      ...settings,
-      [key]: !settings[key]
-    })
-  }
-
   const handleInputChange = (key: keyof SettingsState, value: string) => {
     setSettings({
       ...settings,
