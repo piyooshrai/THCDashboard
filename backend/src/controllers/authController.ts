@@ -36,11 +36,23 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
+    // SECURITY: Prevent public admin registration
+    // Only allow admin registration if NO admins exist yet (first-time setup)
+    if (role === 'admin') {
+      const adminCount = await User.countDocuments({ role: 'admin' });
+      if (adminCount > 0) {
+        res.status(403).json({
+          error: 'Admin registration is restricted. Contact system administrator.'
+        });
+        return;
+      }
+    }
+
     // Create user
     const user = await User.create({
       email,
       password,
-      role,
+      role: role || 'client', // Default to client if no role specified
       status: 'active'
     });
 
