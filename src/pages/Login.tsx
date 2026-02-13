@@ -187,7 +187,17 @@ export const Login: React.FC = () => {
 
         {/* Additional Info */}
         <div className="mt-6 text-center text-xs text-gray-500">
-          <p>Secure authentication powered by JWT</p>
+          <p>
+            Powered By{' '}
+            <a
+              href="https://www.the-algo.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline font-medium"
+            >
+              The Algorithm
+            </a>
+          </p>
         </div>
       </div>
     </div>
