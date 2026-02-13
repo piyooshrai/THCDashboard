@@ -7,7 +7,6 @@ export interface IUser extends Document {
   password: string;
   role: 'client' | 'va' | 'admin';
   status: 'active' | 'inactive' | 'pending';
-  twoFactorEnabled: boolean;
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -48,10 +47,6 @@ const UserSchema = new Schema<IUser>({
       message: 'Status must be active, inactive, or pending'
     },
     default: 'active'
-  },
-  twoFactorEnabled: {
-    type: Boolean,
-    default: false
   }
 }, {
   timestamps: true

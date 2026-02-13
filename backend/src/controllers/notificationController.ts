@@ -23,7 +23,8 @@ export const getMyNotifications = async (req: AuthRequest, res: Response): Promi
     const unreadCount = await Notification.countDocuments({ userId: req.userId, readStatus: false });
 
     res.json({
-      data: notifications,
+      success: true,
+      notifications: notifications,
       pagination: {
         page,
         limit,
