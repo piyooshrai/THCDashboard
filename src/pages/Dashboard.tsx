@@ -143,7 +143,7 @@ export const Dashboard: React.FC = () => {
     }
   }
 
-  const clientOptions = clients.map(c => ({
+  const clientOptions = (clients || []).map(c => ({
     value: c._id,
     label: c.companyName || `${c.userId}`
   }))
@@ -282,7 +282,7 @@ export const Dashboard: React.FC = () => {
                 Recent Activity
               </h2>
               <div className="space-y-3">
-                {stats?.recentActivity?.map((activity: any, index: number) => {
+                {(stats?.recentActivity || []).map((activity: any, index: number) => {
                   const Icon = getActivityIcon(activity.type || 'FileText')
                   return (
                     <div key={index} className="flex gap-2">
