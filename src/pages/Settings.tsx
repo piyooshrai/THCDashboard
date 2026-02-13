@@ -7,7 +7,6 @@ import { ErrorMessage } from '../components/ErrorMessage'
 import { useToast } from '../components/common/Toast'
 import { useAuth } from '../contexts/AuthContext'
 import { ChangePasswordModal } from '../components/modals/ChangePasswordModal'
-import { ExportDataModal } from '../components/modals/ExportDataModal'
 import { DeleteAccountModal } from '../components/modals/DeleteAccountModal'
 import { authService } from '../services/authService'
 import { userService } from '../services/userService'
@@ -16,11 +15,6 @@ interface SettingsState {
   email: string
   firstName: string
   lastName: string
-  twoFactorAuth: boolean
-  emailNotifications: boolean
-  pushNotifications: boolean
-  smsNotifications: boolean
-  invoiceReminders: boolean
   currency: string
   timezone: string
   dateFormat: string
@@ -38,11 +32,6 @@ export const Settings: React.FC = () => {
     email: user?.email || '',
     firstName: user?.firstName || '',
     lastName: user?.lastName || '',
-    twoFactorAuth: false,
-    emailNotifications: true,
-    pushNotifications: true,
-    smsNotifications: false,
-    invoiceReminders: true,
     currency: 'USD',
     timezone: 'America/Denver',
     dateFormat: 'MM/DD/YYYY',
@@ -62,15 +51,7 @@ export const Settings: React.FC = () => {
   }, [user])
 
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false)
-  const [isExportDataOpen, setIsExportDataOpen] = useState(false)
   const [isDeleteAccountOpen, setIsDeleteAccountOpen] = useState(false)
-
-  const handleToggle = (key: keyof SettingsState) => {
-    setSettings({
-      ...settings,
-      [key]: !settings[key]
-    })
-  }
 
   const handleInputChange = (key: keyof SettingsState, value: string) => {
     setSettings({
@@ -116,11 +97,6 @@ export const Settings: React.FC = () => {
       console.error('Failed to change password:', err)
       showToast({ type: 'error', message: 'Failed to change password' })
     }
-  }
-
-  const handleExportData = () => {
-    showToast({ type: 'info', message: 'Data export requires backend implementation. Download will begin shortly.' })
-    setIsExportDataOpen(false)
   }
 
   const handleDeleteAccount = async () => {
@@ -196,57 +172,6 @@ export const Settings: React.FC = () => {
                   Change Password
                 </Button>
               </div>
-              <div className="flex items-center justify-between pt-2">
-                <div>
-                  <p className="font-semibold text-black">Two-Factor Authentication</p>
-                  <p className="text-sm text-gray-500">Add an extra layer of security</p>
-                </div>
-                <button
-                  onClick={() => handleToggle('twoFactorAuth')}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    settings.twoFactorAuth ? 'bg-primary' : 'bg-gray-300'
-                  }`}
-                >
-                  <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      settings.twoFactorAuth ? 'translate-x-6' : 'translate-x-1'
-                    }`}
-                  />
-                </button>
-              </div>
-            </div>
-          </Card>
-
-          <Card>
-            <h2 className="text-xl font-bold font-serif text-black mb-5">
-              Notification Preferences
-            </h2>
-            <div className="space-y-4">
-              {[
-                { key: 'emailNotifications' as const, label: 'Email Notifications', desc: 'Receive notifications via email' },
-                { key: 'pushNotifications' as const, label: 'Push Notifications', desc: 'Receive push notifications in browser' },
-                { key: 'smsNotifications' as const, label: 'SMS Notifications', desc: 'Receive text message notifications' },
-                { key: 'invoiceReminders' as const, label: 'Invoice Reminders', desc: 'Get reminded about unpaid invoices' }
-              ].map((item) => (
-                <div key={item.key} className="flex items-center justify-between py-3 border-b border-gray-100 last:border-0">
-                  <div>
-                    <p className="font-semibold text-black">{item.label}</p>
-                    <p className="text-sm text-gray-500">{item.desc}</p>
-                  </div>
-                  <button
-                    onClick={() => handleToggle(item.key)}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                      settings[item.key] ? 'bg-primary' : 'bg-gray-300'
-                    }`}
-                  >
-                    <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                        settings[item.key] ? 'translate-x-6' : 'translate-x-1'
-                      }`}
-                    />
-                  </button>
-                </div>
-              ))}
             </div>
           </Card>
 
@@ -312,15 +237,6 @@ export const Settings: React.FC = () => {
             </h2>
             <div className="space-y-4">
               <div>
-                <p className="font-semibold text-black mb-2">Export All Data</p>
-                <p className="text-sm text-gray-500 mb-4">
-                  Download a complete copy of your data in JSON format
-                </p>
-                <Button variant="secondary" onClick={() => setIsExportDataOpen(true)}>
-                  Export Data
-                </Button>
-              </div>
-              <div className="pt-4 border-t border-gray-200">
                 <p className="font-semibold text-error mb-2">Delete Account</p>
                 <p className="text-sm text-gray-500 mb-4">
                   Permanently delete your account and all associated data
@@ -350,12 +266,6 @@ export const Settings: React.FC = () => {
         isOpen={isChangePasswordOpen}
         onClose={() => setIsChangePasswordOpen(false)}
         onSubmit={handleChangePassword}
-      />
-
-      <ExportDataModal
-        isOpen={isExportDataOpen}
-        onClose={() => setIsExportDataOpen(false)}
-        onConfirm={handleExportData}
       />
 
       <DeleteAccountModal
