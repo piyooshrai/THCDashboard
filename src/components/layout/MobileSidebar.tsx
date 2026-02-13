@@ -1,5 +1,6 @@
 import React from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { X } from 'lucide-react'
 import {
   LayoutDashboard,
   Users,
@@ -20,7 +21,7 @@ interface NavItem {
   path: string
   icon: React.ElementType
   section?: string
-  roles?: string[] // If not specified, available to all roles
+  roles?: string[]
 }
 
 const navItems: NavItem[] = [
@@ -40,7 +41,12 @@ const navItems: NavItem[] = [
   { label: 'Notifications', path: '/notifications', icon: Bell }
 ]
 
-export const Sidebar: React.FC = () => {
+interface MobileSidebarProps {
+  isOpen: boolean
+  onClose: () => void
+}
+
+export const MobileSidebar: React.FC<MobileSidebarProps> = ({ isOpen, onClose }) => {
   const location = useLocation()
   const navigate = useNavigate()
   const { logout, user } = useAuth()
@@ -54,11 +60,8 @@ export const Sidebar: React.FC = () => {
     let currentSection = ''
     const userRole = user?.role || 'client'
 
-    // Filter nav items based on user role
     const filteredItems = navItems.filter(item => {
-      // If no roles specified, show to everyone
       if (!item.roles) return true
-      // Otherwise, check if user's role is in the allowed roles
       return item.roles.includes(userRole)
     })
 
@@ -82,6 +85,7 @@ export const Sidebar: React.FC = () => {
           )}
           <Link
             to={item.path}
+            onClick={onClose}
             className={`flex items-center gap-3 px-6 py-3 mx-3 rounded-lg transition-all ${
               isActive
                 ? 'bg-primary text-white shadow-md'
@@ -96,41 +100,58 @@ export const Sidebar: React.FC = () => {
     })
   }
 
+  if (!isOpen) return null
+
   return (
-    <div className="w-[280px] h-screen bg-white border-r border-gray-200 flex flex-col flex-shrink-0 lg:flex hidden">
-      <div className="p-6 border-b border-gray-200 flex-shrink-0">
-        <img
-          src="/THC Transparent Logo.png"
-          alt="The Human Capital"
-          className="h-16 w-auto object-contain"
-        />
-        <p className="text-xs text-gray-500 mt-2 uppercase tracking-wide">
-          Admin Panel
-        </p>
-      </div>
+    <>
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+        onClick={onClose}
+      />
 
-      <nav className="flex-1 overflow-y-auto py-4">
-        {renderNavItems()}
-      </nav>
-
-      <div className="p-6 border-t border-gray-200 space-y-3">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-accent flex items-center justify-center text-white font-semibold">
-            {user?.firstName?.[0]}{user?.lastName?.[0]}
-          </div>
-          <div className="flex-1">
-            <p className="font-semibold text-black text-sm">{user?.firstName} {user?.lastName}</p>
-            <p className="text-xs text-gray-500 capitalize">{user?.role}</p>
-          </div>
+      {/* Sidebar */}
+      <div className="fixed inset-y-0 left-0 w-[280px] bg-white border-r border-gray-200 flex flex-col z-50 lg:hidden">
+        {/* Header */}
+        <div className="p-6 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
+          <img
+            src="/THC Transparent Logo.png"
+            alt="The Human Capital"
+            className="h-12 w-auto object-contain"
+          />
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <X className="w-5 h-5 text-gray-600" />
+          </button>
         </div>
-        <button
-          onClick={handleLogout}
-          className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-        >
-          <LogOut className="w-4 h-4" />
-          <span>Logout</span>
-        </button>
+
+        {/* Navigation */}
+        <nav className="flex-1 overflow-y-auto py-4">
+          {renderNavItems()}
+        </nav>
+
+        {/* User Profile */}
+        <div className="p-6 border-t border-gray-200 space-y-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-accent flex items-center justify-center text-white font-semibold">
+              {user?.firstName?.[0]}{user?.lastName?.[0]}
+            </div>
+            <div className="flex-1">
+              <p className="font-semibold text-black text-sm">{user?.firstName} {user?.lastName}</p>
+              <p className="text-xs text-gray-500 capitalize">{user?.role}</p>
+            </div>
+          </div>
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <LogOut className="w-4 h-4" />
+            <span>Logout</span>
+          </button>
+        </div>
       </div>
-    </div>
+    </>
   )
 }

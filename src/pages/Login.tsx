@@ -56,9 +56,13 @@ export const Login: React.FC = () => {
 
         {/* Logo/Brand */}
         <div className="text-center mb-8">
-          <h1 className="font-['Playfair_Display'] text-4xl font-bold text-[#0F2052] mb-2">
-            The Human Capital
-          </h1>
+          <div className="flex justify-center mb-4">
+            <img
+              src="/THC Transparent Logo.png"
+              alt="The Human Capital"
+              className="h-20 w-auto object-contain"
+            />
+          </div>
           <p className="text-gray-600">Sign in to your account</p>
         </div>
 
